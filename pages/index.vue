@@ -1,4 +1,7 @@
 <template>
-    <h1 class="text-red-700">Site pour le projet de BDD</h1>
+    <section>
+        <h1 class="text-6xl font-bold">Transformez vos entraînements</h1>
+        <h1 class="text-6xl font-bold">grâce à l'IA</h1>
+    </section>
 </template>
   
