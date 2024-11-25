@@ -1,2 +1,28 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+    import { Label } from "$lib/components/ui/label";
+    import { Button } from "$lib/components/ui/button";
+    import { Input } from "$lib/components/ui/input";
+    import * as Card from "$lib/components/ui/card";
+</script>
+
+<div class="w-full h-full flex justify-center items-center">
+    <Card.Root class="w-[450px]">
+        <Card.Header>
+          <Card.Title>🌳</Card.Title>
+          <Card.Description>Un chat collaboratif</Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <div class="grid w-full max-w-sm items-center gap-1.5">
+              <Label for="username">Nom d'utilisateur</Label>
+              <Input type="text" id="username" />
+          </div>
+          <div class="pt-4 grid w-full max-w-sm items-center gap-1.5">
+              <Label for="password">Mot de passe</Label>
+              <Input type="password" id="password" />
+          </div>
+        </Card.Content>
+        <Card.Footer>
+          <Button>Se connecter</Button>
+        </Card.Footer>
+      </Card.Root>
+</div>
