@@ -1,3 +1,18 @@
+## Presentation
+
+Creation of a project that use two or more NoSQL technologie: Redis & MangoDB
+
+Front: JavaScript
+
+Back : Java (SpringBoot)
+
+Api to Server Mongo (Nabil's Server)
+
+Update Redis Database
+
+
+
+
 # sv
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
