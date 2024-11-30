@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import prisma from '$lib/prismaClient';
-import redisClient from '$lib/redisClient'; // Assurez-vous d'importer le client Redis
+import redisClient from '$lib/redisClient';
 
 // Récupérer les informations du canal et le dernier message (avec cache Redis)
 export async function GET({ params }) {
@@ -46,7 +46,8 @@ export async function GET({ params }) {
 		};
 
 		// Mettre en cache les informations du canal et le dernier message pendant 5 minutes
-		await redisClient.set(canalCacheKey, JSON.stringify(canalData), 'EX', 300); // Cache pendant 5 minutes
+		await redisClient.set(canalCacheKey, JSON.stringify(canalData), {EX: 300, NX: true}); // Cache pendant 5 minutes
+
 
 		console.log('❌ Cache miss - Mise en cache des résultats');
 		return json(canalData);
@@ -113,7 +114,7 @@ export async function PUT({ params, request }) {
 		};
 
 		// Mettre en cache les nouvelles informations pendant 5 minutes
-		await redisClient.set(canalCacheKey, JSON.stringify(canalData), 'EX', 60 * 5); // Cache pendant 5 minutes
+		await redisClient.set(canalCacheKey, JSON.stringify(canalData), { EX: 300, NX: true });
 
 		return json(canalData);
 	} catch (err) {
