@@ -25,3 +25,27 @@ export async function GET() {
 		return json({ error: 'Erreur serveur' }, { status: 500 });
 	}
 }
+
+export async function POST({ request }) {
+	const { username, surname, name, email, password } = await request.json();
+
+	try {
+		const user = await prisma.user.create({
+			data: {
+				username,
+				surname,
+				name,
+				email,
+				password,
+			},
+		});
+
+		// Mettre le nouvel utilisateur dans le cache
+		await redisClient.set(`user:${user.id}`, JSON.stringify(user), { EX: 3600 });
+
+		return json(user, { status: 201 });
+	} catch (err) {
+		console.error(err);
+		return json({ error: 'Erreur lors de la création de l’utilisateur' }, { status: 500 });
+	}
+}
