@@ -41,6 +41,7 @@
 		"argon2": "^0.41.1",
 		"prisma": "^5.22.0",
 		"redis": "^4.7.0",
-		"svelte-radix": "^2.0.1"
+		"svelte-radix": "^2.0.1",
+		"winston": "^3.17.0"
 	}
 }

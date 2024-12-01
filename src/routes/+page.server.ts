@@ -1,7 +1,8 @@
-import { type Actions, json } from '@sveltejs/kit';
+import { type Actions } from '@sveltejs/kit';
 import prismaClient from '$lib/prismaClient';
 import * as argon2 from 'argon2';
 import { redirect, error } from '@sveltejs/kit';
+import logger from '$lib/logger';
 
 export const actions: Actions = {
 	login: async ({request}) => {
@@ -26,7 +27,8 @@ export const actions: Actions = {
 		try {
 			// @ts-ignore Already checked for null
 			if (await argon2.verify(user.password, password)) {
-				console.log("login succesful")
+				logger.log("info", "saijdazji")
+				logger.log("debug", "saijdazji")
 			} else {
 				return error(400, {message: "Nom d'utilisateur ou mot de passe invalide."});
 			}
