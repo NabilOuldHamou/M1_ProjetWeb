@@ -33,43 +33,19 @@ export async function GET({ params }) {
 	}
 }
 
-export async function POST({ request }) {
-	const { pseudo, nom, prenom, email, password } = await request.json();
-
-	try {
-		const user = await prisma.user.create({
-			data: {
-				pseudo,
-				nom,
-				prenom,
-				email,
-				password,
-			},
-		});
-
-		// Mettre le nouvel utilisateur dans le cache
-		await redisClient.set(`user:${user.id}`, JSON.stringify(user), { EX: 3600 });
-
-		return json(user, { status: 201 });
-	} catch (err) {
-		console.error(err);
-		return json({ error: 'Erreur lors de la création de l’utilisateur' }, { status: 500 });
-	}
-}
-
 // Mettre à jour un utilisateur avec PUT
 export async function PUT({ params, request }) {
 	const userId = parseInt(params.id);
-	const { pseudo, nom, prenom, email, password } = await request.json(); // Assurez-vous d'envoyer tous les champs nécessaires dans le body
+	const { username, surname, name, email, password } = await request.json(); // Assurez-vous d'envoyer tous les champs nécessaires dans le body
 
 	try {
 		// Mettre à jour l'utilisateur dans la base de données
 		const updatedUser = await prisma.user.update({
 			where: { id: userId },
 			data: {
-				pseudo,
-				nom,
-				prenom,
+				username,
+				surname,
+				name,
 				email,
 				password, // Attention à ne pas oublier de sécuriser le mot de passe avec bcrypt ou une autre méthode
 			},
