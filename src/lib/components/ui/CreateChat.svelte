@@ -11,12 +11,31 @@
 
 	let chatName = "";
 
-	const createChat = () => {
+	const createChat = async () => {
 		if (chatName.trim()) {
-			alertMessage = `Le chat "${chatName}" a été créé avec succès.`;
+			try {
+				// Appel API pour créer le chat
+				const response = await fetch('/api/canals', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ name: chatName }),
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					alertMessage = `Le chat "${data.name}" a été créé avec succès.`;
+					chatName = ""; // Réinitialiser
+					onClose?.(); // Fermer le composant après création
+				} else {
+					alertMessage = "Une erreur est survenue lors de la création du chat.";
+				}
+			} catch (err) {
+				alertMessage = "Erreur réseau ou serveur.";
+			}
+
 			showAlert = true;
-			chatName = ""; // Réinitialiser
-			onClose?.(); // Fermer le composant après création
 		} else {
 			alertMessage = "Veuillez entrer un nom pour le chat.";
 			showAlert = true;

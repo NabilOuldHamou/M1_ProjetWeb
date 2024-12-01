@@ -5,6 +5,8 @@
 	import ChatItem from "$lib/components/ui/ChatItem.svelte";
 	import ProfileCard from "$lib/components/ui/ProfileCard.svelte"; // Importer le composant ProfileCard
 	import CreateChat from "$lib/components/ui/CreateChat.svelte"; // Importer le composant CreateChat
+	import { formatDistanceToNow } from "$lib/utils/date.js";
+	import { io } from 'socket.io-client';
 
 	let showProfileCard = false;  // État pour afficher ou masquer le ProfileCard
 	let showCreateChat = false;  // État pour afficher ou masquer CreateChat
@@ -35,6 +37,11 @@
 		console.log('closeCreateChat');
 		showCreateChat = false;  // Fermer le composant CreateChat
 	}
+
+	export let data;
+	export let channels = data.channels;// Assurez-vous que 'lastMessage' est facultatif si nécessaire
+	console.log(channels);
+
 </script>
 
 <div class="h-full flex flex-col gap-5 p-5">
@@ -67,8 +74,9 @@
 	</div>
 
 	<div class="flex flex-col gap-4 overflow-y-auto">
-		<ChatItem title="Discussion avec Yanax" lastMessage="Salut les amis !" time="12:34" />
-		<ChatItem title="Discussion avec Luxray" lastMessage="Salut Yanax" time="12:30" />
+		{#each channels as channel}
+			<ChatItem id={channel.id} title={channel.name} lastMessage={channel.lastMessage} time={formatDistanceToNow(channel.createdAt)} />
+		{/each}
 	</div>
 
 </div>
