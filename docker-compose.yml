@@ -1,0 +1,41 @@
+services:
+  mongodb:
+    image: mongo:latest
+    hostname: mongodb
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=temp-root-username
+      - MONGO_INITDB_ROOT_PASSWORD=temp-password
+      - MONGO_INITDB_DATABASE=chat_projetweb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db/
+      - mongo-logs:/var/log/mongodb/
+    networks:
+      - mongodb_network
+
+  redis:
+    image: redis:latest
+    hostname: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    environment:
+      - REDIS_PASSWORD=temp-redis-password
+    volumes:
+      - redis-data:/root/redis
+    networks:
+      - redis_network
+
+networks:
+  mongodb_network:
+  redis_network:
+
+volumes:
+  mongo-data:
+  mongo-logs:
+  redis-data:
