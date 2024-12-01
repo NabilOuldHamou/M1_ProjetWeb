@@ -25,8 +25,8 @@
         <form method="POST" action="?/login" use:enhance>
           <Card.Content>
             <div class="grid w-full max-w-sm items-center gap-1.5">
-              <Label for="username">Nom d'utilisateur</Label>
-              <Input type="text" name="username" id="username" />
+              <Label for="email">Adresse email</Label>
+              <Input type="text" name="email" id="email" />
             </div>
             <div class="pt-4 grid w-full max-w-sm items-center gap-1.5">
               <Label for="password">Mot de passe</Label>
