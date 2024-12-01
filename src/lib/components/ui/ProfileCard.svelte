@@ -1,28 +1,71 @@
-<script lang="ts">
-	export let name: string = "Nom de l'utilisateur";
-	export let imageUrl: string = "https://via.placeholder.com/150"; // URL de l'image du profil
-	export let bio: string = "Une courte bio sur l'utilisateur.";
-
-	export let onClick: () => void = () => {}; // Fonction pour ouvrir un modal ou autre action
+<script>
+	export let user = {
+		pseudo: '',
+		prenom: '',
+		nom: '',
+		description: '',
+		profilePictureUrl: '',  // Ajouter l'URL de l'image de profil
+	}; // Infos utilisateur
+	export let show = false; // Contrôle si la carte est visible
+	export let onClose = () => {
+	}; // Fonction pour fermer la carte
 </script>
 
-<div class="bg-white shadow-lg rounded-lg overflow-hidden w-64 cursor-pointer" on:click={onClick}>
-	<!-- Image de profil -->
-	<img src={imageUrl} alt="Photo de profil" class="w-full h-32 object-cover" />
-
-	<!-- Détails du profil -->
-	<div class="p-4">
-		<h3 class="text-lg font-bold">{name}</h3>
-		<p class="text-gray-600 text-sm">{bio}</p>
+{#if show}
+	<div class="overlay" role="dialog" aria-labelledby="profile-card-title" on:click={onClose}>
+		<div class="profile-card" on:click|stopPropagation>
+			<div class="profile-header">
+				<!-- Image de profil -->
+				<img src={user.profilePictureUrl} alt="Profile" class="profile-image" />
+				<h2 id="profile-card-title" class="profile-name">{user.pseudo}</h2>
+			</div>
+			<p>{user.prenom} {user.nom}</p>
+			<p>{user.description}</p>
+		</div>
 	</div>
-</div>
+{/if}
 
 <style>
-    div {
-        transition: transform 0.3s ease;
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.7); /* Fond noir avec opacité */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
     }
 
-    div:hover {
-        transform: scale(1.05);
+    .profile-card {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        width: 400px; /* Taille de la carte ajustée */
+        max-width: 90%; /* Limite la largeur */
+    }
+
+    .profile-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .profile-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%; /* Rendre l'image ronde */
+        object-fit: cover; /* Pour que l'image remplisse bien le cercle */
+        margin-right: 15px;
+    }
+
+    .profile-name {
+        font-size: 1.5rem;
+        font-weight: bold;
     }
 </style>

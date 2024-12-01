@@ -2,6 +2,25 @@
 import { json } from '@sveltejs/kit';
 import redisClient from '$lib/redisClient';
 import prisma from '$lib/prismaClient';
+import multer from 'multer';
+
+const destinationDir = '/uploads';
+
+const storage = multer.diskStorage({
+	destination: (req, file, cb) => {
+		cb(null, `.${destinationDir}');  // Dossier où les images sont stockées`
+	},
+	filename: (req, file, cb) => {
+		cb(null, `${Date.now()}-${file.originalname}`);
+	},
+	fileFilter(req, file, cb) {
+		const fileExtension = path.extname(file.originalname).toLowerCase();
+		if (fileExtension !== '.jpg' && fileExtension !== '.jpeg' && fileExtension !== '.png') {
+			return cb(new Error('Seules les images JPG, JPEG et PNG sont autorisées.'));
+		}
+		cb(null, true);
+	}
+});
 
 export async function GET() {
 	try {
