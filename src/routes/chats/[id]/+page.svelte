@@ -16,11 +16,6 @@
     <div class="w-1/4 bg-gray-100 border-r overflow-y-auto">
         <h2 class="text-3xl font-bold px-4 mt-5">Utilisateurs</h2>
         <div class="flex flex-col m-5 gap-2">
-            <UserChat
-                profilePicture="/images/default-profile.png"
-                username="Luxray555"
-                status="En ligne"
-                />
             {#each users as user}
                 <UserChat
                   profilePicture={user.profilePicture}
@@ -36,7 +31,6 @@
         <!-- Messages -->
         <div class="m-10 flex flex-col gap-5 overflow-y-auto flex-grow ">
             <!-- Afficher les messages (mock d'un utilisateur sélectionné ou aucun message par défaut) -->
-            <Message username="Luxray555" messageContent="Sélectionnez un message pour commencer à discuter." />
             {#if messages.length > 0}
                 {#each messages as message}
                     <Message username={message.username} messageContent={message.messageContent} />
