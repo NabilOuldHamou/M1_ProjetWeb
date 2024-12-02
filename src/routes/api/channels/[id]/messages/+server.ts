@@ -1,32 +1,31 @@
 import { json } from '@sveltejs/kit';
 import prisma from '$lib/prismaClient';
-import redisClient from '$lib/redisClient'; // Assure-toi d'importer ton client Redis
+import redisClient from '$lib/redisClient';
 
 export async function GET({ params, url }) {
-	const canalId = parseInt(params.id);
+	const channelId = params.id;
 
-	// Gestion de la pagination avec des paramètres optionnels `page` et `limit`
-	const page = parseInt(url.searchParams.get('page')) || 1;
-	const limit = parseInt(url.searchParams.get('limit')) || 10;
+	// @ts-ignore
+	const page = url.searchParams.get('page') != null ? parseInt(url.searchParams.get('page')) : 1;
+	// @ts-ignore
+	const limit = url.searchParams.get('limit') != null ? parseInt(url.searchParams.get('limit')) : 10;
 	const offset = (page - 1) * limit;
 
 	// Générer une clé cache Redis unique en fonction du canal et des paramètres de pagination
-	const cacheKey = `canal:${canalId}:messages:page:${page}:limit:${limit}`;
+	const cacheKey = `channel:${channelId}:messages:page:${page}:limit:${limit}`;
 
 	try {
-		// 1. Vérifier si les messages sont déjà dans le cache Redis
 		const cachedMessages = await redisClient.get(cacheKey);
 		if (cachedMessages) {
 			console.log('✅ Cache hit');
 			return json(JSON.parse(cachedMessages)); // Si les données sont en cache, les retourner
 		}
 
-		// 2. Si les messages ne sont pas en cache, récupérer depuis la base de données
 		const messages = await prisma.message.findMany({
-			where: { canalId },
+			where: { channelId },
 			include: {
 				user: {
-					select: { id: true, pseudo: true }, // Inclut uniquement l’ID et le pseudo de l’utilisateur
+					select: { id: true, username: true },
 				},
 			},
 			orderBy: {
@@ -36,9 +35,9 @@ export async function GET({ params, url }) {
 			take: limit,
 		});
 
-		// 3. Compter le nombre total de messages pour la pagination
+
 		const totalMessages = await prisma.message.count({
-			where: { canalId },
+			where: { channelId },
 		});
 
 		const response = {
@@ -51,11 +50,11 @@ export async function GET({ params, url }) {
 			},
 		};
 
-		// 4. Mettre en cache les messages avec une expiration (par exemple 5 minutes)
-		await redisClient.set(cacheKey, JSON.stringify(response), 'EX', 60 * 5); // Cache pendant 5 minutes
+
+		await redisClient.set(cacheKey, JSON.stringify(response), { EX: 600 });
 
 		console.log('❌ Cache miss - Mise en cache des résultats');
-		return json(response); // Retourner les données récupérées
+		return json(response);
 	} catch (err) {
 		console.error(err);
 		return json({ error: 'Erreur lors de la récupération des messages' }, { status: 500 });
@@ -63,7 +62,7 @@ export async function GET({ params, url }) {
 }
 
 export async function POST({ params, request }) {
-	const canalId = parseInt(params.id);
+	const channelId = params.id;
 	const { userId, text } = await request.json();
 
 	try {
@@ -71,10 +70,10 @@ export async function POST({ params, request }) {
 		const newMessage = await prisma.message.create({
 			data: {
 				userId,
-				canalId,
+				channelId,
 				text,
 			},
-			include: { user: { select: { id: true, pseudo: true } } },
+			include: { user: { select: { id: true, username: true } } },
 		});
 
 		updateCaches(); // Mettre à jour les caches après la création d’un nouveau message
@@ -87,7 +86,7 @@ export async function POST({ params, request }) {
 }
 
 export async function DELETE({ params }) {
-	const messageId = parseInt(params.id);
+	const messageId = params.id;
 
 	try {
 		// Supprimer le message de la base de données
@@ -105,14 +104,12 @@ export async function DELETE({ params }) {
 }
 
 // Fonction pour mettre à jour tous les caches des messages
-function updateCaches(canalId) {
-	// Mettre à jour tous les caches
-	// Mettre à jour toutes les pages dans le cache
+function updateCaches(channelId: string) {
 	let page : number = 1;
 	let limit : number = 10;
 	let offset : number = (page - 1) * limit;
 	while (true) {
-		const cacheKey = `canal:${canalId}:messages:page:${page}:limit:${limit}`;
+		const cacheKey = `channel:${channelId}:messages:page:${page}:limit:${limit}`;
 		const cachedMessages = await redisClient.get(cacheKey);
 		if (!cachedMessages) {
 			break;
