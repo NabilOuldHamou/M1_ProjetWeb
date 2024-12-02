@@ -5,7 +5,7 @@ export async function load({ fetch, params }) {
 			headers: {
 				'Content-Type': 'application/json'
 			}
-		}
+		});
 		const messages = await res.json();
 		return {
 			messages

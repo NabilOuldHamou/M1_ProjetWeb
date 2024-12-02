@@ -104,21 +104,21 @@ export async function DELETE({ params }) {
 }
 
 // Fonction pour mettre à jour tous les caches des messages
-function updateCaches(channelId: string) {
+async function updateCaches(channelId: string) {
 	let page : number = 1;
 	let limit : number = 10;
 	let offset : number = (page - 1) * limit;
 	while (true) {
-		const cacheKey = `channel:${channelId}:messages:page:${page}:limit:${limit}`;
+		const cacheKey = `channel:${channelId}:messages:page:${page}`;
 		const cachedMessages = await redisClient.get(cacheKey);
 		if (!cachedMessages) {
 			break;
 		}
 		const totalMessages = await prisma.message.count({
-			where: { canalId },
+			where: { channelId },
 		});
 		const messages = await prisma.message.findMany({
-			where: { canalId },
+			where: { channelId },
 			include: {
 				user: {
 					select: { id: true, pseudo: true },
