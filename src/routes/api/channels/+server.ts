@@ -57,15 +57,13 @@ export async function POST({ request }) {
 
 		channels.push(canal);
 
+		logger.debug(`Added channel (${canal.id}) to channels cache.`);
 		await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
-		console.log('Liste des canaux mise à jour dans Redis');
 
-		// 5. Retourner le canal créé dans la réponse
 		return json(canal, { status: 201 });
 
 	} catch (err) {
-		// Gérer les erreurs et les retourner
-		console.error('Erreur lors de la création du canal:', err);
+		logger.error(err);
 		return json({ error: 'Erreur lors de la création du canal' }, { status: 500 });
 	}
 }

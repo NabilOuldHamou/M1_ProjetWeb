@@ -1,7 +1,7 @@
 export async function load({ fetch }) {
 	try {
 			// Appel API ou récupération de données
-		const res = await fetch('/api/canals', {
+		const res = await fetch('/api/channels', {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json'

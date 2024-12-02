@@ -5,7 +5,7 @@
     export let time: string; // Heure du dernier message
 </script>
 
-<a href={`/chat/${id}`} class="chat-item p-4 border rounded-md hover:bg-gray-100 cursor-pointer flex justify-between items-center">
+<a href={`/chats/${id}`} class="chat-item p-4 border rounded-md hover:bg-gray-100 cursor-pointer flex justify-between items-center">
     <div>
         <p class="font-semibold text-lg">{title}</p>
         <p class="text-sm text-gray-500 truncate">{lastMessage}</p>
