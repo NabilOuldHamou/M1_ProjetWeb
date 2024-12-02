@@ -2,7 +2,11 @@
 	import Textarea from "../../../lib/components/ui/textarea/textarea.svelte";
     import { Button } from "$lib/components/ui/button";
     import PaperPlane from "svelte-radix/PaperPlane.svelte";
-	import Message from "$lib/components/Message.svelte";
+	  import Message from "$lib/components/Message.svelte";
+
+    export let data;
+    export let messages = data.messages;
+
 </script>
 
 <div class="h-full">

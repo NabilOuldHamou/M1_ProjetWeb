@@ -38,10 +38,20 @@
 		showCreateChat = false;  // Fermer le composant CreateChat
 	}
 
+	async function loadNewChannels(name : string) {
+		console.log('loadNewChannels');
+		const res = await fetch(`/api/channels?name=${name}`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+			}
+		});
+		channels = await res.json();
+		console.log(channels);
+	}
+
 	export let data;
 	export let channels = data.channels;// Assurez-vous que 'lastMessage' est facultatif si nécessaire
-	console.log(channels);
-
 </script>
 
 <div class="h-full flex flex-col gap-5 p-5">
@@ -58,7 +68,7 @@
 
 		<div class="flex items-center gap-2 w-full mr-6 ml-6">
 			<div class="relative w-full">
-				<Search class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+				<Search class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" onChange={loadNewChannels}/>
 			</div>
 		</div>
 

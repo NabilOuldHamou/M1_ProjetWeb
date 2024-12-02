@@ -8,11 +8,11 @@ export async function GET({ params, url }) {
 	// @ts-ignore
 	const page = url.searchParams.get('page') != null ? parseInt(url.searchParams.get('page')) : 1;
 	// @ts-ignore
-	const limit = url.searchParams.get('limit') != null ? parseInt(url.searchParams.get('limit')) : 10;
+	const limit = 10;
 	const offset = (page - 1) * limit;
 
 	// Générer une clé cache Redis unique en fonction du canal et des paramètres de pagination
-	const cacheKey = `channel:${channelId}:messages:page:${page}:limit:${limit}`;
+	const cacheKey = `channel:${channelId}:messages:page:${page}`;
 
 	try {
 		const cachedMessages = await redisClient.get(cacheKey);

@@ -15,7 +15,7 @@
 		if (chatName.trim()) {
 			try {
 				// Appel API pour créer le chat
-				const response = await fetch('/api/canals', {
+				const response = await fetch('/api/channels', {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
