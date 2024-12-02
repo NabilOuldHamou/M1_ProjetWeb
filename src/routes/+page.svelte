@@ -6,6 +6,14 @@
   import { enhance } from '$app/forms';
   import * as Tabs from "$lib/components/ui/tabs";
 
+  import { io } from 'socket.io-client'
+
+  const socket = io()
+
+  socket.on('eventFromServer', (message) => {
+    console.log(message)
+  })
+
 </script>
 
 <div class="w-full h-full flex justify-center items-center">
