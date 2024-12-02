@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Textarea from "$lib/components/ui/textarea/textarea.svelte";
-    import { Button } from "$lib/components/ui/button/index.js";
+	import Textarea from "../../../lib/components/ui/textarea/textarea.svelte";
+    import { Button } from "$lib/components/ui/button";
     import PaperPlane from "svelte-radix/PaperPlane.svelte";
 	import Message from "$lib/components/Message.svelte";
 </script>
