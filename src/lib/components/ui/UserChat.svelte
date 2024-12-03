@@ -29,10 +29,10 @@
 						d="M12 6v6m0 0v6m0-6h6m-6 0H6"
 					/>
 				</svg>
-			{:else}
+			{:else if status === "Writing"}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					class="h-3 w-3 text-gray-500"
+					class="h-3 w-3 text-blue-500"
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"
