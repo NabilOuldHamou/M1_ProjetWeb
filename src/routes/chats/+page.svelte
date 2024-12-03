@@ -6,7 +6,7 @@
 	import ProfileCard from "$lib/components/ui/ProfileCard.svelte"; // Importer le composant ProfileCard
 	import CreateChat from "$lib/components/ui/CreateChat.svelte"; // Importer le composant CreateChat
 	import { formatDistanceToNow } from "$lib/utils/date.js";
-	import { io } from 'socket.io-client';
+	import { initSocket } from "$lib/stores/socket";
 
 	let showProfileCard = false;  // État pour afficher ou masquer le ProfileCard
 	let showCreateChat = false;  // État pour afficher ou masquer CreateChat
@@ -17,6 +17,12 @@
 		description: 'Développeur passionné',
 		profilePictureUrl: 'path/to/profile-picture.jpg',  // URL de l'image de profil
 	};
+
+	let socket = initSocket(); // Initialiser le socket
+
+	socket.on("new-channel", (channel) => {
+		channels = [channel, ...channels];
+	});
 
 	function openProfileCard() {
 		console.log('openProfileCard');
@@ -85,12 +91,17 @@
 
 	<div class="flex flex-col gap-4 overflow-y-auto">
 		{#each channels as channel}
-			<ChatItem id={channel.id} title={channel.name} lastMessage={channel.lastMessage} time={formatDistanceToNow(channel.createdAt)} />
+			<ChatItem
+				id={channel.id}
+				title={channel.name}
+				lastMessage={channel.lastMessage ? channel.lastMessage.text : "Ecrire le premier message"}
+				time={formatDistanceToNow(channel.lastUpdate)}
+			/>
 		{/each}
 	</div>
 
 </div>
-<CreateChat show={showCreateChat} onClose={closeCreateChat} />
+<CreateChat show={showCreateChat} socket={socket} onClose={closeCreateChat} />
 <ProfileCard {user} show={showProfileCard} onClose={closeProfileCard} />
 
 <style>

@@ -1,4 +1,4 @@
-export async function load({ fetch, params }) {
+export async function load({ fetch, params, locals }) {
 	try {
 		const res = await fetch(`/api/channels/${params.id}/messages?page=1`, {
 			method: 'GET',
@@ -7,15 +7,18 @@ export async function load({ fetch, params }) {
 			}
 		});
 		const messages = await res.json();
+		console.log(messages);
 		return {
 			messages,
 			channelId: params.id,
+			userId: locals.userId
 		}
 	}catch (error) {
 		console.error('Erreur lors du chargement des messages:', error);
 		return {
 			messages: [],
 			channelId: params.id,
+			userId: locals.userId
 		};
 	}
 }
