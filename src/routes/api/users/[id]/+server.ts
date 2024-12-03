@@ -2,6 +2,9 @@ import { json } from '@sveltejs/kit';
 import redisClient from '$lib/redisClient';
 import prisma from '$lib/prismaClient';
 import logger from '$lib/logger';
+import { writeFile } from 'node:fs/promises';
+import { extname } from 'path';
+import * as argon2 from 'argon2';
 
 export async function GET({ params }) {
 	const userId = params.id;
@@ -44,18 +47,45 @@ export async function GET({ params }) {
 // Mettre à jour un utilisateur avec PUT
 export async function PUT({ params, request }) {
 	const userId = params.id;
-	const { username, surname, name, email, password } = await request.json();
+	const formData = await request.formData();
+
+	const data: {username?: string, email?: string, surname?: string, name?: string, password?: string, profilePicture?: string} = {};
+
+	// @ts-ignore
+	const username = formData.get('username').toString();
+	// @ts-ignore
+	const surname = formData.get('surname').toString();
+	// @ts-ignore
+	const name = formData.get('name').toString();
+	// @ts-ignore
+	const email = formData.get('email').toString();
+	// @ts-ignore
+	const password = formData?.get('password');
+	// @ts-ignore
+	const profilePicture: File | null = formData?.get('profilePicture');
+
+
+	let filename: string | null = null;
+	if (profilePicture != null) {
+		filename = `${crypto.randomUUID()}${extname(profilePicture?.name)}`;
+		await writeFile(`static/${filename}`, Buffer.from(await profilePicture?.arrayBuffer()));
+		data.profilePicture = filename;
+	}
+
+	if (password != null) {
+		data.password = await argon2.hash(password.toString());
+	}
+
+	data.username = username;
+	data.surname = surname;
+	data.name = name;
+	data.email = email;
+
 
 	try {
 		const updatedUser = await prisma.user.update({
 			where: { id: userId },
-			data: {
-				username,
-				surname,
-				name,
-				email,
-				password, // Attention à ne pas oublier de sécuriser le mot de passe avec bcrypt ou une autre méthode
-			},
+			data: data
 		});
 		logger.debug(`Updated user (${updatedUser.id}) in database`);
 

@@ -14,13 +14,14 @@ datasource db {
 }
 
 model User {
-  id       String    @id @default(auto()) @map("_id") @db.ObjectId
-  username String    @unique
-  surname  String
-  name     String
-  email    String    @unique
-  password String
-  messages Message[]
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  username        String    @unique
+  profilePicture  String @default("default.png")
+  surname         String
+  name            String
+  email           String    @unique
+  password        String
+  messages        Message[]
 
   @@map("users") // Table name in DB
 }
