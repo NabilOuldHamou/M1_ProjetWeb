@@ -8,12 +8,14 @@ export async function load({ fetch, params }) {
 		});
 		const messages = await res.json();
 		return {
-			messages
+			messages,
+			channelId: params.id,
 		}
 	}catch (error) {
 		console.error('Erreur lors du chargement des messages:', error);
 		return {
-			messages: []
+			messages: [],
+			channelId: params.id,
 		};
 	}
 }

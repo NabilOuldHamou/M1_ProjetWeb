@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Textarea from "../../../lib/components/ui/textarea/textarea.svelte";
+    import Textarea  from "$lib/components/ui/textarea/textarea.svelte";
     import { Button } from "$lib/components/ui/button";
     import PaperPlane from "svelte-radix/PaperPlane.svelte";
     import Message from "$lib/components/Message.svelte";
@@ -7,8 +7,28 @@
 
     export let data;
     export let messages = data.messages;
-    export let users = data.users; // Liste des utilisateurs
-    let selectedUser = null; // Utilisateur actuellement sélectionné
+    export let users = data.users;
+
+    let messageText = '';
+
+    async function sendMessage() {
+        // Appel API pour envoyer le message
+        const response = await fetch(`/api/channels/${data.channelId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user: data.userId, text: messageText }),
+        });
+
+        if (response.ok) {
+            messageText = '';
+            console.log('Message envoyé avec succès');
+        }else{
+            console.log('Erreur lors de l\'envoi du message');
+        }
+    }
+
 </script>
 
 <div class="h-full flex">
@@ -42,8 +62,8 @@
 
         <!-- Input pour envoyer un message -->
         <div class="px-10 py-5 w-full flex gap-2 border-t">
-            <Textarea class="h-16 resize-none flex-grow" placeholder="Écrivez un message..." />
-            <Button size="icon" class="h-16 w-16 bg-blue-500 hover:bg-blue-600 h-full">
+            <Textarea class="h-16 resize-none flex-grow" placeholder="Écrivez un message..." value={messageText}/>
+            <Button size="icon" class="h-16 w-16 bg-blue-500 hover:bg-blue-600 h-full" on:click={sendMessage}>
                 <PaperPlane class="h-6 w-6" />
             </Button>
         </div>
