@@ -6,7 +6,7 @@
     import UserChat from '$lib/components/ui/UserChat.svelte';
 
     export let data;
-    export let messages = data.messages;
+    export let messages = data.messages.messages;
     export let users = data.users;
 
     let messageText = '';
@@ -18,11 +18,12 @@
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ user: data.userId, text: messageText }),
+            body: JSON.stringify({ userId: data.userId, text: messageText }),
         });
 
         if (response.ok) {
             messageText = '';
+            // Envoyer le message avec les sockets (à implémenter)
             console.log('Message envoyé avec succès');
         }else{
             console.log('Erreur lors de l\'envoi du message');
@@ -53,7 +54,7 @@
             <!-- Afficher les messages (mock d'un utilisateur sélectionné ou aucun message par défaut) -->
             {#if messages.length > 0}
                 {#each messages as message}
-                    <Message username={message.username} messageContent={message.messageContent} />
+                    <Message username={message.user.username} messageContent={message.text} />
                 {/each}
             {:else}
                 <div class="text-center text-gray-500 mt-10">Sélectionnez un message le chat est vide.</div>
@@ -62,7 +63,7 @@
 
         <!-- Input pour envoyer un message -->
         <div class="px-10 py-5 w-full flex gap-2 border-t">
-            <Textarea class="h-16 resize-none flex-grow" placeholder="Écrivez un message..." value={messageText}/>
+            <Textarea class="h-16 resize-none flex-grow" placeholder="Écrivez un message..." bind:value={messageText}/>
             <Button size="icon" class="h-16 w-16 bg-blue-500 hover:bg-blue-600 h-full" on:click={sendMessage}>
                 <PaperPlane class="h-6 w-6" />
             </Button>

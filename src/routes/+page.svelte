@@ -1,10 +1,27 @@
 <script lang="ts">
+  import Alert from "$lib/components/ui/Alert.svelte";
   import { Label } from "$lib/components/ui/label";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import * as Card from "$lib/components/ui/card";
   import { enhance } from '$app/forms';
   import * as Tabs from "$lib/components/ui/tabs";
+  let { data, form } = $props();
+  import { writable } from 'svelte/store';
+
+  const showAlert = writable(false);
+  const alertMessage = writable("");
+
+  $effect(() => {
+    // Manipuler l'état via les stores, ce qui est plus réactif
+    if (form?.error) {
+      alertMessage.set(form.error);
+      showAlert.set(true);
+    } else {
+      showAlert.set(false);
+    }
+  });
+
 
 </script>
 
@@ -70,3 +87,5 @@
 
   </Tabs.Root>
 </div>
+
+<Alert message={$alertMessage} show={$showAlert} onClose={() => ($showAlert = false)} />

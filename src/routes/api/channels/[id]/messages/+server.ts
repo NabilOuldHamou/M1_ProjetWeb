@@ -73,7 +73,6 @@ export async function POST({ params, request }) {
 				channelId,
 				text,
 			},
-			include: { user: { select: { id: true, username: true } } },
 		});
 
 		updateCaches(); // Mettre à jour les caches après la création d’un nouveau message

@@ -18,12 +18,24 @@ export async function GET({ params, url }) {
 				include: {
 					messages: {
 						take: 1, // Récupère le dernier message
-						orderBy: { createdAt: 'desc' }, // Trie par date décroissante
+						orderBy: { createdAt: 'desc' },// Trie par date décroissante
+						// as lastMessage not list last message
 					},
 				},
 			});
 
+			console.log(canaux);
+
+			canaux = canaux.map((canaux) => {
+				return {
+					...canaux,
+					lastMessage: canaux.messages.length > 0 ? canaux.messages[0] : null,
+					messages: undefined
+				};
+			});
+
 			canaux = sortChannels(canaux);
+			console.log(canaux);
 
 			return json(canaux);
 
@@ -50,7 +62,16 @@ export async function GET({ params, url }) {
 				},
 			});
 
+			canaux = canaux.map((canaux) => {
+				return {
+					...canaux,
+					lastMessage: canaux.messages.length > 0 ? canaux.messages[0] : null,
+					messages: undefined
+				};
+			});
+
 			canaux = sortChannels(canaux);
+			console.log(canaux);
 
 			logger.debug('Caching channels with EX of 3600 secs');
 			await redisClient.set('channels', JSON.stringify(canaux), { EX: 3600 });
@@ -69,7 +90,7 @@ export async function POST({ request }) {
 	const { name } = await request.json();
 
 	try {
-		const canal = await prisma.channel.create({
+		let canal = await prisma.channel.create({
 			data: {
 				name
 			},
@@ -79,13 +100,16 @@ export async function POST({ request }) {
 		const cachedChanels = await redisClient.get('channels');
 
 		let channels = cachedChanels != null ? JSON.parse(cachedChanels) : [];
-		console.log(channels);
-		console.log(canal);
+
+		canal = {
+			...canal,
+			lastMessage: null,
+			messages: undefined
+		}
 
 		channels.push(canal);
 
 		channels = sortChannels(channels);
-		console.log(channels);
 
 		logger.debug(`Added channel (${canal.id}) to channels cache.`);
 		await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
@@ -100,11 +124,16 @@ export async function POST({ request }) {
 }
 
 function sortChannels(channels) {
-	return channels.sort((a, b) => {
-		// Vérifie si 'a.messages' existe et est un tableau, sinon utilise la date de création du canal
-		const lastMessageA = Array.isArray(a.messages) && a.messages.length > 0 ? a.messages[0]?.createdAt : a.createdAt;
-		const lastMessageB = Array.isArray(b.messages) && b.messages.length > 0 ? b.messages[0]?.createdAt : b.createdAt;
+	channels = channels.map((channel) => {
+		return {
+			...channel,
+			lastUpdate : channel.lastMessage != null ? channel.lastMessage.createdAt : channel.createdAt
+		};
+	});
 
-		return new Date(lastMessageB).getTime() - new Date(lastMessageA).getTime();
+	return channels.sort((a, b) => {
+		return new Date(b.lastUpdate) - new Date(a.lastUpdate);
 	});
 }
+
+
