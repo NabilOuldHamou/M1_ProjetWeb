@@ -9,7 +9,7 @@ export async function load({locals}) {
 }
 
 export const actions: Actions = {
-	login: async ({request, fetch, cookies}) => {
+	login: async ({request, fetch, cookies, locals}) => {
 		const formData = await request.formData();
 
 		const response = await fetch('/api/auth/login', {
@@ -27,7 +27,14 @@ export const actions: Actions = {
 				maxAge: (60 * 60) * 30,
 			});
 
-			logger.debug("Successfully created a cookie for the user and proceeded with the login.")
+			cookies.set('UID', data.userId, {
+				path: '/',
+				httpOnly: true,
+				sameSite: 'strict',
+				maxAge: (60 * 60) * 30,
+			});
+
+			logger.debug("Successfully created a cookie for the user and proceeded with the login.");
 
 			return redirect(302, "/chats");
 		} else {

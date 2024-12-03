@@ -30,7 +30,7 @@ export async function POST({request}) {
 			// @ts-ignore
 			const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
 			logger.debug(`Generated a JWT token for user ${user.email}.`)
-			return json({token: token});
+			return json({token: token, userId: user.id});
 
 		} else {
 			return error(400, {message: "Email ou mot de passe invalide."});

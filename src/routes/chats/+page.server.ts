@@ -1,4 +1,5 @@
 export async function load({ fetch }) {
+
 	try {
 			// Appel API ou récupération de données
 		const res = await fetch('/api/channels', {
