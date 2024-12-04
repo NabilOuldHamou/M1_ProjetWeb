@@ -1,6 +1,6 @@
 export async function load({ fetch, params, locals }) {
 	try {
-		const res = await fetch(`/api/channels/${params.id}/messages?page=1`, {
+		const res = await fetch(`/api/channels/${params.id}/messages?page=1&limit=10`, {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json'

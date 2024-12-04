@@ -4,6 +4,9 @@
     import PaperPlane from "svelte-radix/PaperPlane.svelte";
     import Message from "$lib/components/Message.svelte";
     import UserChat from '$lib/components/ui/UserChat.svelte';
+    import { tick } from 'svelte';
+
+    import { formatDistanceToNow } from '$lib/utils/date.ts';
 
     export let data;
     export let messages = data.messages.messages;
@@ -30,6 +33,55 @@
         }
     }
 
+    let currentPage = 1;
+    let isLoading = false;
+    let scrollContainer: HTMLElement;
+
+    async function loadMoreMessages() {
+        if (isLoading) return;
+        isLoading = true;
+
+        // Sauvegarder la hauteur actuelle
+        const previousHeight = scrollContainer.scrollHeight;
+
+        try {
+            const response = await fetch(`/api/channels/${data.channelId}/messages?page=${currentPage + 1}&limit=10`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const newMessages = await response.json();
+                if(newMessages.messages.length <= 0){
+                    console.log('Pas d\'autres anciens messages');
+                    return;
+                }
+                messages = [...newMessages.messages, ...messages]; // Ajouter les nouveaux messages en haut
+                currentPage++;
+            } else {
+                console.error('Erreur lors du chargement des anciens messages');
+            }
+        } catch (error) {
+            console.error('Erreur réseau lors du chargement des messages:', error);
+        } finally {
+            isLoading = false;
+
+            // Réajuster la position de défilement
+            await tick(); // Attendre la mise à jour du DOM
+            const newHeight = scrollContainer.scrollHeight;
+            scrollContainer.scrollTop = newHeight - previousHeight;
+        }
+    }
+
+    function handleScroll(event: Event) {
+        const container = event.target as HTMLElement;
+        if (container.scrollTop === 0 && !isLoading) {
+            loadMoreMessages();
+        }
+    }
+
 </script>
 
 <div class="h-full flex">
@@ -50,11 +102,18 @@
     <!-- Chat principal (colonne droite) -->
     <div class="flex-1 flex flex-col h-full">
         <!-- Messages -->
-        <div class="m-10 flex flex-col gap-5 overflow-y-auto flex-grow ">
+        <div
+          class="m-10 flex flex-col gap-5 overflow-y-auto flex-grow "
+          bind:this={scrollContainer}
+          on:scroll={handleScroll}
+        >
+            {#if isLoading}
+                <div class="loading-indicator">Chargement...</div>
+            {/if}
             <!-- Afficher les messages (mock d'un utilisateur sélectionné ou aucun message par défaut) -->
             {#if messages.length > 0}
                 {#each messages as message}
-                    <Message username={message.user.username} messageContent={message.text} />
+                    <Message username={message.user.username} messageContent={message.text} createdAt={message.createdAt} />
                 {/each}
             {:else}
                 <div class="text-center text-gray-500 mt-10">Sélectionnez un message le chat est vide.</div>
@@ -75,7 +134,9 @@
     .h-full {
         height: 100%;
     }
-    .selected {
-        background-color: #e2e8f0;
+    .loading-indicator {
+        text-align: center;
+        padding: 10px;
+        color: gray;
     }
 </style>

@@ -95,7 +95,7 @@
 				id={channel.id}
 				title={channel.name}
 				lastMessage={channel.lastMessage ? channel.lastMessage.text : "Ecrire le premier message"}
-				time={formatDistanceToNow(channel.lastUpdate)}
+				createdAt={channel.lastUpdate}
 			/>
 		{/each}
 	</div>
