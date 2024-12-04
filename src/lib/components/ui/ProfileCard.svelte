@@ -1,15 +1,11 @@
 <script>
 	import Button  from '$lib/components/ui/button/button.svelte';
 
-	export let user = {
-		pseudo: '',
-		prenom: '',
-		nom: '',
-		description: '',
-		profilePictureUrl: '',  // Ajouter l'URL de l'image de profil
-	}; // Infos utilisateur
+	export let user;
 	export let show = false; // Contrôle si la carte est visible
 	export let onClose = () => {}; // Fonction pour fermer la carte
+
+	console.log(user)
 
 	const disconnect = async () => {
 		try {
@@ -34,11 +30,10 @@
 		<div class="profile-card" on:click|stopPropagation>
 			<div class="profile-header">
 				<!-- Image de profil -->
-				<img src={user.profilePictureUrl} alt="Profile" class="profile-image" />
-				<h2 id="profile-card-title" class="profile-name">{user.pseudo}</h2>
+				<img src={user.profilePicture} alt="Profile" class="profile-image" />
+				<h2 id="profile-card-title" class="profile-name">{user.username}</h2>
 			</div>
-			<p>{user.prenom} {user.nom}</p>
-			<p>{user.description}</p>
+			<p>{user.name} {user.surname}</p>
 			<Button on:click={disconnect}>Deconnecter</Button>
 		</div>
 	</div>

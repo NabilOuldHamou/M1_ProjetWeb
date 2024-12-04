@@ -17,7 +17,7 @@ export async function GET({ params, url }) {
 	try {
 		// Essayer de récupérer les messages du cache Redis
 		logger.debug(`Tentative de récupération des messages du cache pour le channel : ${channelId}`);
-		let redisMessages = await redisClient.zRange(`channel:${channelId}:messages`, start, stop, { REV: true });
+		let redisMessages = await redisClient.zRange(`channel:${channelId}:messages`, start, stop);
 
 		if (redisMessages && redisMessages.length > 0) {
 			logger.debug(`Messages trouvés dans le cache pour le channel : ${channelId}`);

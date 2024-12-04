@@ -60,6 +60,13 @@ export const actions: Actions = {
 				maxAge: (60 * 60) * 30,
 			});
 
+			cookies.set('UID', data.userId, {
+				path: '/',
+				httpOnly: true,
+				sameSite: 'strict',
+				maxAge: (60 * 60) * 30,
+			});
+
 			logger.debug("Successfully created a cookie for the user and proceeded with the register.")
 
 			return redirect(302, "/chats");

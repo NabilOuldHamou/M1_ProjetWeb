@@ -5,18 +5,10 @@
 	import ChatItem from "$lib/components/ui/ChatItem.svelte";
 	import ProfileCard from "$lib/components/ui/ProfileCard.svelte"; // Importer le composant ProfileCard
 	import CreateChat from "$lib/components/ui/CreateChat.svelte"; // Importer le composant CreateChat
-	import { formatDistanceToNow } from "$lib/utils/date.js";
 	import { initSocket } from "$lib/stores/socket";
 
 	let showProfileCard = false;  // État pour afficher ou masquer le ProfileCard
 	let showCreateChat = false;  // État pour afficher ou masquer CreateChat
-	let user = {
-		pseudo: 'JohnDoe',
-		prenom: 'John',
-		nom: 'Doe',
-		description: 'Développeur passionné',
-		profilePictureUrl: 'path/to/profile-picture.jpg',  // URL de l'image de profil
-	};
 
 	let socket = initSocket(); // Initialiser le socket
 
@@ -68,7 +60,7 @@
 			class="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white"
 			on:click={openProfileCard}
 		>
-			<img src={user.profilePictureUrl} alt="Profile" class="h-8 w-8 rounded-full" />
+			<img src={data.user.profilePicture} alt="Profile" class="h-8 w-8 rounded-full" />
 			Profile
 		</Button>
 
@@ -102,7 +94,7 @@
 
 </div>
 <CreateChat show={showCreateChat} socket={socket} onClose={closeCreateChat} />
-<ProfileCard {user} show={showProfileCard} onClose={closeProfileCard} />
+<ProfileCard user={data.user} show={showProfileCard} onClose={closeProfileCard} />
 
 <style>
     .h-full {

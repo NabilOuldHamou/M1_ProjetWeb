@@ -4,9 +4,7 @@
     import PaperPlane from "svelte-radix/PaperPlane.svelte";
     import Message from "$lib/components/Message.svelte";
     import UserChat from '$lib/components/ui/UserChat.svelte';
-    import { tick } from 'svelte';
-
-    import { formatDistanceToNow } from '$lib/utils/date.ts';
+    import { onMount, tick } from 'svelte';
 
     export let data;
     export let messages = data.messages.messages;
@@ -54,6 +52,7 @@
 
             if (response.ok) {
                 const newMessages = await response.json();
+                console.log(newMessages);
                 if(newMessages.messages.length <= 0){
                     console.log('Pas d\'autres anciens messages');
                     return;
@@ -81,6 +80,12 @@
             loadMoreMessages();
         }
     }
+
+    onMount(() => scrollToBottom(scrollContainer))
+
+    const scrollToBottom = async (node: any) => {
+        node.scroll({ top: node.scrollHeight, behavior: 'smooth' });
+    };
 
 </script>
 
@@ -111,9 +116,9 @@
                 <div class="loading-indicator">Chargement...</div>
             {/if}
             <!-- Afficher les messages (mock d'un utilisateur sélectionné ou aucun message par défaut) -->
-            {#if messages.length > 0}
+            {#if messages !== undefined && messages.length > 0}
                 {#each messages as message}
-                    <Message username={message.user.username} messageContent={message.text} createdAt={message.createdAt} />
+                    <Message profilePicture={message.user.profilePicture} username={message.user.username} messageContent={message.text} createdAt={message.createdAt} />
                 {/each}
             {:else}
                 <div class="text-center text-gray-500 mt-10">Sélectionnez un message le chat est vide.</div>

@@ -6,9 +6,6 @@
   export let messageContent: string;
   export let profilePicture: string | null; // Peut être null
   export let createdAt: string; // Date de création du message
-
-  // Image par défaut si profilePicture est null
-  let defaultProfilePicture = "/images/default-profile.png";
 </script>
 
 <Card.Root class="relative">
@@ -16,7 +13,7 @@
     <!-- Image de profil collée à gauche -->
     <div class="flex flex-row gap-3 items-center">
       <img
-        src={profilePicture || defaultProfilePicture}
+        src={`http://localhost:5173/${profilePicture}`}
         alt="Profile Picture"
         class="h-10 w-10 rounded-full border border-gray-300"
       />
