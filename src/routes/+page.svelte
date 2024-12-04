@@ -23,6 +23,8 @@
   });
 
 
+  let random = Math.trunc(Math.random() * 10);
+
 </script>
 
 <div class="w-full h-full flex justify-center items-center">
@@ -36,7 +38,11 @@
     <Tabs.Content value="login">
       <Card.Root>
         <Card.Header>
-          <Card.Title>🌳 - Arbres</Card.Title>
+          {#if random > 8}
+            <Card.Title>🌳 - Arabes</Card.Title>
+          {:else}
+            <Card.Title>🌳 - Arbres</Card.Title>
+          {/if}
           <Card.Description>Connectez vous pour chatter!</Card.Description>
         </Card.Header>
         <form method="POST" action="?/login" use:enhance>
@@ -60,7 +66,11 @@
     <Tabs.Content value="register">
       <Card.Root>
         <Card.Header>
-          <Card.Title>🌳 - Arbres</Card.Title>
+          {#if random > 8}
+            <Card.Title>🌳 - Arabes</Card.Title>
+          {:else}
+            <Card.Title>🌳 - Arbres</Card.Title>
+          {/if}
           <Card.Description>Inscrivez-vous pour chatter!</Card.Description>
         </Card.Header>
         <form method="POST" action="?/register" use:enhance>

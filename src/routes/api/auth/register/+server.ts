@@ -8,9 +8,9 @@ export async function POST({request}) {
 	const formData = await request.formData();
 
 	// @ts-ignore
-	const username: string = formData.get('username').toString();
+	const username: string = formData.get('username').toString().toLowerCase();
 	// @ts-ignore
-	const email: string = formData.get('email').toString();
+	const email: string = formData.get('email').toString().toLowerCase();
 	// @ts-ignore
 	const password: string = formData.get('password').toString();
 
@@ -28,9 +28,7 @@ export async function POST({request}) {
 		return error(400, {message: "Un compte avec cette adresse email ou nom d'utilisateur existe déjà."});
 	}
 
-	logger.debug(`No user found with email (${email}) in database`);
 	try {
-
 		const hash = await argon2.hash(password);
 
 		const newUser = await prismaClient.user.create({
