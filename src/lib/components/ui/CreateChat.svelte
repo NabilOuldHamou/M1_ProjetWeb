@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from "svelte";
 	import Alert from "$lib/components/ui/Alert.svelte"; // Importer le composant Alert
 
 	export let show = false;
@@ -8,6 +7,8 @@
 
 	let showAlert = false;
 	let alertMessage = "";
+
+	export let socket;
 
 	let chatName = "";
 
@@ -27,12 +28,15 @@
 					const data = await response.json();
 					alertMessage = `Le chat "${data.name}" a été créé avec succès.`;
 					chatName = ""; // Réinitialiser
+					socket.emit("new-channel", data);
 					onClose?.(); // Fermer le composant après création
 				} else {
-					alertMessage = "Une erreur est survenue lors de la création du chat.";
+					response.json().then(error => {
+						alertMessage = error.error;
+					});
 				}
 			} catch (err) {
-				alertMessage = "Erreur réseau ou serveur.";
+				alertMessage = err;
 			}
 
 			showAlert = true;
@@ -40,10 +44,6 @@
 			alertMessage = "Veuillez entrer un nom pour le chat.";
 			showAlert = true;
 		}
-	};
-
-	const closeAlert = () => {
-		showAlert = false;
 	};
 
 	// Fonction pour détecter le clic en dehors
@@ -75,7 +75,7 @@
 	</div>
 {/if}
 
-<Alert show={showAlert} message={alertMessage} onClose={closeAlert} />
+<Alert show={showAlert} message={alertMessage} onClose={() => (showAlert = false)} />
 
 <style>
     .fixed {

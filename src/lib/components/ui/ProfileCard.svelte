@@ -1,4 +1,6 @@
 <script>
+	import Button  from '$lib/components/ui/button/button.svelte';
+
 	export let user = {
 		pseudo: '',
 		prenom: '',
@@ -7,8 +9,24 @@
 		profilePictureUrl: '',  // Ajouter l'URL de l'image de profil
 	}; // Infos utilisateur
 	export let show = false; // Contrôle si la carte est visible
-	export let onClose = () => {
-	}; // Fonction pour fermer la carte
+	export let onClose = () => {}; // Fonction pour fermer la carte
+
+	const disconnect = async () => {
+		try {
+			// Envoyer une requête POST à l'endpoint /disconnect
+			const response = await fetch('/disconnect', {
+				method: 'POST',
+			});
+
+			// Vérifier si la déconnexion a réussi (ici, on se base sur le code de redirection)
+			if (response.redirected) {
+				// Si la redirection est effectuée, vous pouvez rediriger manuellement côté client
+				window.location.href = response.url;
+			}
+		} catch (error) {
+			console.error('Erreur lors de la déconnexion:', error);
+		}
+	};
 </script>
 
 {#if show}
@@ -21,6 +39,7 @@
 			</div>
 			<p>{user.prenom} {user.nom}</p>
 			<p>{user.description}</p>
+			<Button on:click={disconnect}>Deconnecter</Button>
 		</div>
 	</div>
 {/if}

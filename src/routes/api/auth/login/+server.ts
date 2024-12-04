@@ -26,7 +26,7 @@ export async function POST({request}) {
 	logger.debug(`Found user with email (${email}) in database`);
 	try {
 		if (await argon2.verify(user.password, password)) {
-
+			logger.debug(`Password for user ${user.email} is correct.`);
 			// @ts-ignore
 			const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
 			logger.debug(`Generated a JWT token for user ${user.email}.`)
@@ -39,7 +39,7 @@ export async function POST({request}) {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	} catch (e) {
 		logger.error(e);
-		return error(500, {message: "Erreur interne."});
+		return error(500, {message: e.body.message});
 	}
 
 
