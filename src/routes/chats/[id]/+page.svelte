@@ -11,13 +11,12 @@
     export let messages = data.messages.messages;
     export let users = data.users;
 
+
+    let scrollContainer: HTMLElement;
     let messageText = '';
 
     let socket = initSocket(); // Initialiser le socket
 
-    socket.on("new-message", (message) => {
-        messages = [...messages , message ];
-    });
     async function sendMessage() {
         // Appel API pour envoyer le message
         const response = await fetch(`/api/channels/${data.channelId}/messages`, {
@@ -42,7 +41,6 @@
 
     let currentPage = 1;
     let isLoading = false;
-    let scrollContainer: HTMLElement;
 
     async function loadMoreMessages() {
         if (isLoading) return;
@@ -90,10 +88,28 @@
         }
     }
 
-    onMount(() => scrollToBottom(scrollContainer))
+    onMount(() => {
+        scrollToBottom(scrollContainer);
 
-    const scrollToBottom = async (node: any) => {
-        node.scroll({ top: node.scrollHeight, behavior: 'smooth' });
+        socket.on("new-message", (message) => {
+            messages = [...messages , message ];
+        });
+    });
+
+    async function handleEnter(event: KeyboardEvent) {
+        if (event.key === 'Enter') {
+            await sendMessage();
+        }
+    }
+
+    const scrollToBottom = node => {
+        const scroll = () => node.scroll({
+            top: node.scrollHeight,
+            behavior: 'smooth',
+        });
+        scroll();
+
+        return { update: scroll }
     };
 
 </script>
@@ -119,6 +135,7 @@
         <div
           class="m-10 flex flex-col gap-5 overflow-y-auto flex-grow "
           bind:this={scrollContainer}
+          use:scrollToBottom={messages}
           on:scroll={handleScroll}
         >
             {#if isLoading}
@@ -136,7 +153,7 @@
 
         <!-- Input pour envoyer un message -->
         <div class="px-10 py-5 w-full flex gap-2 border-t">
-            <Textarea class="h-16 resize-none flex-grow" placeholder="Écrivez un message..." bind:value={messageText}/>
+            <Textarea class="h-16 resize-none flex-grow" placeholder="Écrivez un message..." bind:value={messageText} on:keypress={handleEnter}/>
             <Button size="icon" class="h-16 w-16 bg-blue-500 hover:bg-blue-600 h-full" on:click={sendMessage}>
                 <PaperPlane class="h-6 w-6" />
             </Button>

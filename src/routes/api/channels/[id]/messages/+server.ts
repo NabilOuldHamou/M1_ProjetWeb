@@ -11,18 +11,16 @@ export async function GET({ params, url }) {
 	const page = parseInt(url.searchParams.get('page') || '1'); // Par défaut, page 1
 
 	const offset = (page - 1) * limit;
-	const start = offset; // Début de la plage
-	const stop = offset + limit - 1; // Fin de la plage inclusif
 
 	try {
 		// Essayer de récupérer les messages du cache Redis
 		logger.debug(`Tentative de récupération des messages du cache pour le channel : ${channelId}`);
-		let redisMessages = await redisClient.zRange(`channel:${channelId}:messages`, start, stop);
+		let redisMessages = await redisClient.zRange(`channel:${channelId}:messages`, offset, limit, {REV:true});
 
 		if (redisMessages && redisMessages.length > 0) {
 			logger.debug(`Messages trouvés dans le cache pour le channel : ${channelId}`);
 			const messages = await redisClient.mGet(redisMessages).then(
-				(messages) => messages.map((m) => JSON.parse(m))
+				(messages) => messages.map((m) => JSON.parse(m)).reverse()
 			);
 
 			return json({ limit, page, messages });
@@ -48,8 +46,6 @@ export async function GET({ params, url }) {
 				},
 			},
 			orderBy: [{ createdAt: 'desc' }],
-			take: limit,
-			skip: offset,
 		});
 
 		if (messagesFromDB.length > 0) {
