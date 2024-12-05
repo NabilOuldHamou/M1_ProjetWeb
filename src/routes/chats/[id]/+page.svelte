@@ -16,9 +16,7 @@
     let socket = initSocket(); // Initialiser le socket
 
     socket.on("new-message", (message) => {
-        console.log('Recu du nouveau message', message);
         messages = [...messages , message ];
-        console.log(messages);
     });
     async function sendMessage() {
         // Appel API pour envoyer le message
