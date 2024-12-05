@@ -14,6 +14,10 @@ const webSocketServer = {
 			socket.on('new-channel', (channel) => {
 				io.emit('new-channel', channel)
 			});
+			socket.on('new-message', (message) => {
+				console.log('Diffudion du nouveau message', message,"<= ici");
+				io.emit('new-message', message)
+			});
 		});
 	}
 }

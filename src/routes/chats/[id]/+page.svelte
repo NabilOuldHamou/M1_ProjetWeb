@@ -5,6 +5,7 @@
     import Message from "$lib/components/Message.svelte";
     import UserChat from '$lib/components/ui/UserChat.svelte';
     import { onMount, tick } from 'svelte';
+    import { initSocket } from '$lib/stores/socket';
 
     export let data;
     export let messages = data.messages.messages;
@@ -12,6 +13,13 @@
 
     let messageText = '';
 
+    let socket = initSocket(); // Initialiser le socket
+
+    socket.on("new-message", (message) => {
+        console.log('Recu du nouveau message', message);
+        messages = [...messages , message ];
+        console.log(messages);
+    });
     async function sendMessage() {
         // Appel API pour envoyer le message
         const response = await fetch(`/api/channels/${data.channelId}/messages`, {
@@ -23,9 +31,12 @@
         });
 
         if (response.ok) {
-            messageText = '';
+            let newMessage =await response.json();
+
             // Envoyer le message avec les sockets (à implémenter)
+            socket.emit('new-message', newMessage);
             console.log('Message envoyé avec succès');
+            messageText = '';
         }else{
             console.log('Erreur lors de l\'envoi du message');
         }
