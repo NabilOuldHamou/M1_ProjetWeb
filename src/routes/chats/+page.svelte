@@ -7,12 +7,16 @@
 	import CreateChat from "$lib/components/ui/CreateChat.svelte"; // Importer le composant CreateChat
 	import { initSocket } from "$lib/stores/socket";
 
+	let chatListRef: HTMLElement | null = null;
+
 	let showProfileCard = false;  // État pour afficher ou masquer le ProfileCard
 	let showCreateChat = false;  // État pour afficher ou masquer CreateChat
 
 	let socket = initSocket(); // Initialiser le socket
 
 	socket.on("new-channel", (channel) => {
+		console.log(channel);
+		console.log(channels);
 		channels = [channel, ...channels];
 	});
 
@@ -81,7 +85,7 @@
 		</Button>
 	</div>
 
-	<div class="flex flex-col gap-4 overflow-y-auto">
+	<div class="flex flex-col gap-4 overflow-y-auto" bind:this={chatListRef}>
 		{#each channels as channel}
 			<ChatItem
 				id={channel.id}
@@ -93,7 +97,7 @@
 	</div>
 
 </div>
-<CreateChat show={showCreateChat} socket={socket} onClose={closeCreateChat} />
+<CreateChat show={showCreateChat} socket={socket} onClose={closeCreateChat} listRef={chatListRef} />
 <ProfileCard user={data.user} show={showProfileCard} onClose={closeProfileCard} />
 
 <style>

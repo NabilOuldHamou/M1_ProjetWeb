@@ -3,6 +3,8 @@
 
 	export let show = false;
 
+	export let listRef: HTMLElement | null = null;
+
 	export let onClose: () => void; // Callback pour fermer le composant
 
 	let showAlert = false;
@@ -29,6 +31,9 @@
 					alertMessage = `Le chat "${data.name}" a été créé avec succès.`;
 					chatName = ""; // Réinitialiser
 					socket.emit("new-channel", data);
+					if (listRef) {
+						listRef.scrollTo({ top: 0, behavior: 'smooth' });
+					}
 					onClose?.(); // Fermer le composant après création
 				} else {
 					response.json().then(error => {

@@ -104,6 +104,7 @@ export async function POST({ request }) {
 		canal = {
 			...canal,
 			lastMessage: null,
+			lastUpdate: canal.createdAt,
 			messages: undefined
 		}
 
