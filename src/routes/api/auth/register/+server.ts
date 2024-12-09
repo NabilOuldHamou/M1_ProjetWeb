@@ -44,7 +44,7 @@ export async function POST({request}) {
 		// @ts-ignore
 		const token = jwt.sign(newUser, process.env.JWT_SECRET, { expiresIn: "1h" });
 		logger.debug(`Generated a JWT token for user ${newUser.email}.`)
-		return json({token: token});
+		return json({token: token, userId: newUser.id});
 
 	} catch (e) {
 		logger.error(e);
