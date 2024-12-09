@@ -144,7 +144,7 @@
             <!-- Afficher les messages (mock d'un utilisateur sélectionné ou aucun message par défaut) -->
             {#if messages !== undefined && messages.length > 0}
                 {#each messages as message}
-                    <Message profilePicture={message.user.profilePicture} username={message.user.username} messageContent={message.text} createdAt={message.createdAt} />
+                    <Message myMessage={data.userId == message.user.id} user={message.user}  messageContent={message.text} createdAt={message.createdAt} />
                 {/each}
             {:else}
                 <div class="text-center text-gray-500 mt-10">Sélectionnez un message le chat est vide.</div>

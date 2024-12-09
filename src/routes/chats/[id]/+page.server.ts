@@ -7,7 +7,6 @@ export async function load({ fetch, params, locals }) {
 			}
 		});
 		const messages = await res.json();
-		console.log(messages);
 		return {
 			messages,
 			channelId: params.id,
