@@ -15,6 +15,12 @@
     let scrollContainer: HTMLElement;
     let messageText = '';
 
+    let activeProfileId = null;
+
+    function setActiveProfile(id) {
+        activeProfileId = id;
+    }
+
     let socket = initSocket(); // Initialiser le socket
 
     async function sendMessage() {
@@ -144,7 +150,12 @@
             <!-- Afficher les messages (mock d'un utilisateur sélectionné ou aucun message par défaut) -->
             {#if messages !== undefined && messages.length > 0}
                 {#each messages as message}
-                    <Message myMessage={data.userId == message.user.id} user={message.user}  messageContent={message.text} createdAt={message.createdAt} />
+                    <Message
+                      myMessage={data.userId == message.user.id}
+                      message={message}
+                      activeProfileId={activeProfileId}
+                      setActiveProfile={setActiveProfile}
+                    />
                 {/each}
             {:else}
                 <div class="text-center text-gray-500 mt-10">Sélectionnez un message le chat est vide.</div>

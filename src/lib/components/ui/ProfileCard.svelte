@@ -23,18 +23,29 @@
 			console.error('Erreur lors de la déconnexion:', error);
 		}
 	};
+
+	const editProfile = () => {
+		window.location.href = '/user/edit';
+	};
 </script>
 
 {#if show}
 	<div class="overlay" role="dialog" aria-labelledby="profile-card-title" on:click={onClose}>
-		<div class="profile-card" on:click|stopPropagation>
-			<div class="profile-header">
-				<!-- Image de profil -->
-				<img src={user.profilePicture} alt="Profile" class="profile-image" />
-				<h2 id="profile-card-title" class="profile-name">{user.username}</h2>
+		<div class="profile-card flex flex-col gap-5" on:click|stopPropagation>
+			<div class="flex flex-col gap-2">
+				<div class="profile-header">
+					<!-- Image de profil -->
+					<img src={user.profilePicture} alt="Profile" class="profile-image" />
+					<h2 id="profile-card-title" class="profile-name">{user.username}</h2>
+				</div>
+				<p>{user.name} {user.surname}</p>
 			</div>
-			<p>{user.name} {user.surname}</p>
-			<Button on:click={disconnect}>Deconnecter</Button>
+
+			<div class="flex flex-col gap-3">
+				<Button on:click={editProfile}>Editer</Button>
+				<Button on:click={disconnect} variant="destructive">Déconnexion</Button>
+			</div>
+
 		</div>
 	</div>
 {/if}
@@ -65,7 +76,7 @@
 
     .profile-header {
         display: flex;
-        justify-content: center;
+        justify-content: left;
         align-items: center;
         margin-bottom: 20px;
     }

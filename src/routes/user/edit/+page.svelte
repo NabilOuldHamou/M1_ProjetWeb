@@ -2,11 +2,16 @@
 	import { onMount } from 'svelte';
 	import ChoosePicture from "$lib/components/ui/ChoosePicture.svelte"; // Import du composant
 
-	let pseudo = '';
-	let firstName = '';
-	let lastName = '';
-	let email = '';
-	let profilePicture: File | null = null;
+	export let data;
+	const user = data.user;
+	console.log(user);
+
+	let pseudo = user.username;
+	let firstName = user.name;
+	let lastName = user.surname;
+	let email = user.email;
+
+	let profilePicture = user.profilePicture; // Chemin initial ou valeur null
 
 	let message = '';
 	let showMessage = false;
@@ -26,28 +31,31 @@
 			message = 'L\'email est invalide.';
 			showMessage = true;
 		} else {
-			// Vous pouvez ici envoyer les données à un serveur via une API
+			updateUser();
 			message = 'Informations mises à jour avec succès!';
 			showMessage = true;
 		}
 	};
 
-	// Fonction pour gérer le téléchargement de l'image de profil
-	const handleFileChange = (event: Event) => {
-		const input = event.target as HTMLInputElement;
-		if (input.files?.length) {
-			profilePicture = input.files[0];
-		}
-	};
+	async function updateUser() {
+		const formData = new FormData();
+		formData.append('username', pseudo);
+		formData.append('name', firstName);
+		formData.append('surname', lastName);
+		formData.append('email', email);
 
-	// Simulation de données au chargement
-	onMount(() => {
-		pseudo = '';
-		firstName = '';
-		lastName = '';
-		email = '';
-		profilePicture = null;  // ou une valeur par défaut si vous en avez une
-	});
+		if (profilePicture) {
+			formData.append('profilePicture', profilePicture);
+		}
+
+		const res = await fetch(`/api/users/${user.id}`, {
+			method: 'PUT',
+			body: formData, // Transmet les données comme multipart/form-data
+		});
+		const result = await res.json();
+		console.log(result);
+	}
+
 </script>
 
 <div class="flex items-center justify-center min-h-screen bg-gray-100 mg-10">
@@ -109,10 +117,7 @@
 
 			<!-- Intégration du composant de photo de profil -->
 			<div class="mb-4">
-				<ChoosePicture profilePicture={profilePicture} onFileChange={handleFileChange} />
-				{#if profilePicture}
-					<div class="mt-2 text-sm text-gray-600">Image sélectionnée : {profilePicture.name}</div>
-				{/if}
+				<ChoosePicture bind:profilePicture={profilePicture} />
 			</div>
 
 			<div class="mt-6 flex justify-center">
@@ -128,12 +133,6 @@
 </div>
 
 <style>
-    /* Supprimez le sélecteur body si non utilisé */
-    /* body {
-        background-color: #f8fafc;
-        font-family: sans-serif;
-    } */
-
     input, button {
         font-family: inherit;
     }

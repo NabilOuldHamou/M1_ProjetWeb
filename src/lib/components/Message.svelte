@@ -6,19 +6,19 @@
 
   export let myMessage: boolean; // Si c'est le message de l'utilisateur courant
 
-  export let user = null; // Infos utilisateur
-  export let messageContent = ""; // Contenu du message
-  export let createdAt = new Date(); // Date de création du message
+  export let message = null; // Contenu du message
 
   let defaultProfilePicture = "/images/default-profile.png";
-  let showProfileInfo = false; // Contrôle la visibilité des informations de profil
+
+  export let setActiveProfile;
+  export let activeProfileId = null;
 
   // Temps écoulé (calculé périodiquement)
   let timeElapsed: string;
 
   // Fonction pour mettre à jour le temps écoulé
   const updateElapsed = () => {
-    timeElapsed = formatDistanceToNow(createdAt);
+    timeElapsed = formatDistanceToNow(message.createdAt);
   };
 
   // Initialisation de l'intervalle
@@ -30,6 +30,17 @@
       clearInterval(interval); // Nettoyage lors du démontage
     };
   });
+
+  function toggleProfileInfo() {
+    if (activeProfileId === message.id) {
+      // Si le profil cliqué est déjà actif, le fermer
+      setActiveProfile(null);
+    } else {
+      // Sinon, afficher ce profil et masquer les autres
+      setActiveProfile(message.id);
+    }
+  }
+
 </script>
 
 <Card.Root class="relative">
@@ -45,25 +56,24 @@
     <div class="flex items-center gap-3 {myMessage ? 'flex-row-reverse' : 'flex-row'}">
       <div
         class="relative"
-        on:mouseenter={() => (showProfileInfo = true)}
-        on:mouseleave={() => (showProfileInfo = false)}
+        on:click={toggleProfileInfo}
       >
         <!-- Image de profil -->
         <img
-          src={user.profilePicture ? `http://localhost:5173/${user.profilePicture}` : defaultProfilePicture}
+          src={message.user.profilePicture ? `http://localhost:5173/${message.user.profilePicture}` : defaultProfilePicture}
           alt="Profile Picture"
-          class="h-10 w-10 rounded-full border border-gray-300"
+          class="h-10 w-10 rounded-full border border-gray-300 cursor-pointer"
         />
 
         <!-- Infos du profil (affichées au survol) -->
-        <ProfileInfo user={user} show={showProfileInfo} position={myMessage ? "right" : "left"} />
+        <ProfileInfo user={message.user} show={activeProfileId === message.id} position={myMessage} />
       </div>
 
       <div class="flex flex-col text-right {myMessage ? 'text-right' : 'text-left'}">
         <Card.Title
-          class="text-gray-800 text-sm sm:text-base md:text-lg truncate {myMessage ? 'font-black' : ''}"
+          class="text-gray-800 text-sm sm:text-base md:text-lg truncate {myMessage ? 'font-bold' : ''}"
         >
-          {myMessage ? "(Moi)" : ""} {user.username}
+          {myMessage ? "(Moi)" : ""} {message.user.username}
         </Card.Title>
       </div>
     </div>
@@ -71,7 +81,7 @@
 
   <!-- Contenu du message -->
   <Card.Content class="text-sm sm:text-base md:text-lg text-gray-700">
-    <p>{messageContent}</p>
+    <p>{message.text}</p>
   </Card.Content>
 </Card.Root>
 

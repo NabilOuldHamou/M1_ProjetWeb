@@ -1,20 +1,61 @@
 <script lang="ts">
-	export let profilePicture: File | null = null;
-	const defaultImage = '/profile-default.svg'; // Remplacez par votre image par défaut
+	import { onMount } from 'svelte';
 
-	// Gérer le changement de fichier sélectionné
+	export let profilePicture: File | null = null;
+	export let defaultImage = '/profile-default.svg'; // Image par défaut si aucune image n'est sélectionnée
+
+	let clientPicture: string | null = profilePicture ? `/${profilePicture}` : defaultImage;
+
+	// Fonction exécutée lorsque l'utilisateur sélectionne une image
 	const handleFileChange = (event: Event) => {
 		const input = event.target as HTMLInputElement;
 		if (input.files?.length) {
-			profilePicture = input.files[0];
+			profilePicture = input.files[0]; // Affectation du fichier sélectionné
+			clientPicture = URL.createObjectURL(profilePicture); // Prévisualisation de l'image
+		} else {
+			clientPicture = null;
+			profilePicture = null;
 		}
 	};
 
-	// Supprimer l'image
 	const handleDelete = () => {
 		profilePicture = null;
 	};
 </script>
+
+<!-- Conteneur principal -->
+<div class="container">
+	<!-- Image de profil ou image par défaut -->
+	<img
+		src={clientPicture}
+		alt="Image de profil"
+		class="image-preview mb-10"
+	/>
+
+	<!-- Sélectionner une image -->
+	<label for="profilePicture" class="file-upload-btn">
+		Sélectionner une image
+		<input
+			type="file"
+			id="profilePicture"
+			class="file-input"
+			accept="image/*"
+			on:change={handleFileChange}
+		/>
+	</label>
+
+	<div class="action-buttons">
+		<!-- Bouton Supprimer l'image -->
+		<button
+			type="button"
+			class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+			on:click={handleDelete}
+			disabled={!profilePicture}
+		>
+			Supprimer l'image
+		</button>
+	</div>
+</div>
 
 <style>
     .container {
@@ -69,37 +110,3 @@
         cursor: not-allowed;
     }
 </style>
-
-<!-- Conteneur principal -->
-<div class="container">
-	<!-- Image de profil ou image par défaut -->
-	<img
-		src={profilePicture ? URL.createObjectURL(profilePicture) : defaultImage}
-		alt="Image de profil"
-		class="image-preview mb-10"
-	/>
-
-	<!-- Sélectionner une image -->
-	<label for="profilePicture" class="file-upload-btn">
-		Sélectionner une image
-		<input
-			type="file"
-			id="profilePicture"
-			class="file-input"
-			accept="image/*"
-			on:change={handleFileChange}
-		/>
-	</label>
-
-	<div class="action-buttons">
-		<!-- Bouton Supprimer l'image -->
-		<button
-			type="button"
-			class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
-			on:click={handleDelete}
-			disabled={!profilePicture}
-		>
-			Supprimer l'image
-		</button>
-	</div>
-</div>
