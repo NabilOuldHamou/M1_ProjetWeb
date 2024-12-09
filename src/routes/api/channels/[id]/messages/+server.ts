@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import prisma from '$lib/prismaClient';
 import redisClient from '$lib/redisClient';
 import logger from '$lib/logger';
+import { sortChannels } from '$lib/utils/sort.ts';
 
 export async function GET({ params, url }) {
 	const channelId = params.id;
@@ -93,6 +94,12 @@ export async function POST({ params, request }) {
 						profilePicture: true,
 					},
 				},
+				channel: {
+					select: {
+						id: true,
+						name: true,
+					},
+				}
 			},
 		});
 
@@ -102,6 +109,15 @@ export async function POST({ params, request }) {
 			score: new Date(newMessage.createdAt).getTime(),
 			value: `message:${newMessage.id}`,
 		});
+
+		//update the channels cache with the new message
+		const cachedChannels = await redisClient.get('channels');
+		let channels = JSON.parse(cachedChannels);
+		const channel = channels.find((c) => c.id === channelId);
+		channel.lastMessage = newMessage;
+		channel.lastUpdate = newMessage.createdAt;
+		channels = sortChannels(channels);
+		await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
 
 		logger.debug(`Nouveau message ajouté pour le channel : ${channelId}`);
 		return json(newMessage, { status: 201 });

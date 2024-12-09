@@ -15,9 +15,16 @@
 	let socket = initSocket(); // Initialiser le socket
 
 	socket.on("new-channel", (channel) => {
-		console.log(channel);
-		console.log(channels);
 		channels = [channel, ...channels];
+	});
+
+	socket.on("new-message", (message) => {
+		const channel = channels.find((channel) => channel.id === message.channel.id);
+		if (channel) {
+			channel.lastMessage = message;
+			channel.lastUpdate = message.createdAt;
+			channels = [channel, ...channels.filter((c) => c.id !== channel.id)];
+		}
 	});
 
 	function openProfileCard() {

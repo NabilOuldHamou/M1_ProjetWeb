@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import prisma from '$lib/prismaClient';
 import redisClient from '$lib/redisClient';
 import logger from '$lib/logger';
+import { sortChannels } from '$lib/utils/sort.ts';
 
 // GET: Liste tous les canaux avec leur premier message
 export async function GET({ params, url }) {
@@ -122,19 +123,6 @@ export async function POST({ request }) {
 		logger.error(err);
 		return json({ error: 'Erreur lors de la création du canal' }, { status: 500 });
 	}
-}
-
-function sortChannels(channels) {
-	channels = channels.map((channel) => {
-		return {
-			...channel,
-			lastUpdate : channel.lastMessage != null ? channel.lastMessage.createdAt : channel.createdAt
-		};
-	});
-
-	return channels.sort((a, b) => {
-		return new Date(b.lastUpdate) - new Date(a.lastUpdate);
-	});
 }
 
 
