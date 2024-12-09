@@ -34,7 +34,7 @@
     <!-- Image de profil collée à gauche -->
     <div class="flex flex-row gap-3 items-center">
       <img
-        src={profilePicture || defaultProfilePicture}
+        src={'http://localhost:5173/' + profilePicture}
         alt="Profile Picture"
         class="h-10 w-10 rounded-full border border-gray-300"
       />
