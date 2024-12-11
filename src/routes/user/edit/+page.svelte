@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import ChoosePicture from "$lib/components/ui/ChoosePicture.svelte"; // Import du composant
+	import ChoosePicture from "$lib/components/ui/ChoosePicture.svelte";
+	import { Button } from '$lib/components/ui/button';
 
 	export let data;
 	const user = data.user;
@@ -50,7 +50,7 @@
 
 		const res = await fetch(`/api/users/${user.id}`, {
 			method: 'PUT',
-			body: formData, // Transmet les données comme multipart/form-data
+			body: formData,
 		});
 		const result = await res.json();
 		console.log(result);
@@ -120,16 +120,20 @@
 				<ChoosePicture bind:profilePicture={profilePicture} />
 			</div>
 
-			<div class="mt-6 flex justify-center">
+			<div class="mt-6 flex flex-col gap-6 items-center justify-center">
 				<button
 					type="submit"
 					class="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 focus:outline-none"
 				>
 					Mettre à jour
 				</button>
+
+
+				<Button href="/chats" variant="secondary">Retour au menu principal</Button>
 			</div>
 		</form>
-	</div>
+
+		</div>
 </div>
 
 <style>

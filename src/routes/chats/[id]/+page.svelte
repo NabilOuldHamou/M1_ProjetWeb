@@ -6,6 +6,7 @@
     import UserChat from '$lib/components/ui/UserChat.svelte';
     import { onMount, tick } from 'svelte';
     import { initSocket } from '$lib/stores/socket';
+    import { ArrowLeft } from 'lucide-svelte';
 
     export let data;
     export let messages = data.messages.messages;
@@ -95,11 +96,10 @@
     }
 
     onMount(() => {
-        scrollToBottom(scrollContainer);
-
         socket.on("new-message", (message) => {
             messages = [...messages , message ];
         });
+        scrollToBottom(scrollContainer);
     });
 
     async function handleEnter(event: KeyboardEvent) {
@@ -123,7 +123,10 @@
 <div class="h-full flex">
     <!-- Liste des utilisateurs (colonne gauche) -->
     <div class="w-1/4 bg-gray-100 border-r overflow-y-auto">
-        <h2 class="text-3xl font-bold px-4 mt-5">Utilisateurs</h2>
+        <div class="flex gap-4 px-4 mt-5">
+            <Button href="/chats" variant="outline" size="icon" ><ArrowLeft /></Button>
+            <h2 class="text-3xl font-bold">Utilisateurs</h2>
+        </div>
         <div class="flex flex-col m-5 gap-2">
             {#each users as user}
                 <UserChat
@@ -151,7 +154,7 @@
             {#if messages !== undefined && messages.length > 0}
                 {#each messages as message}
                     <Message
-                      myMessage={data.userId == message.user.id}
+                      myMessage={data.userId === message.user.id}
                       message={message}
                       activeProfileId={activeProfileId}
                       setActiveProfile={setActiveProfile}

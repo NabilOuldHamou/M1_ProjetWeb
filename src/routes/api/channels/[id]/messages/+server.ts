@@ -14,7 +14,7 @@ export async function GET({ params, url }) {
 
 	try {
 		logger.debug(`Tentative de récupération des messages du cache pour le channel : ${channelId}`);
-		const redisMessageKeys = await redisClient.zRange(
+		const redisMessageKeys = await redisClient.zRangeWithScores(
 			`channel:${channelId}:messages`,
 			offset,
 			offset + limit - 1,
@@ -24,10 +24,23 @@ export async function GET({ params, url }) {
 		if (redisMessageKeys.length > 0) {
 			const messages = await Promise.all(
 				redisMessageKeys.map(async (key) => {
-					const message = await redisClient.get(key);
+					const message = await redisClient.get(key.value);
 					return JSON.parse(message);
 				})
 			);
+
+			const redisPipeline = redisClient.multi();
+			for (const key of redisMessageKeys) {
+				const message = await redisClient.get(key.value);
+				const msg = JSON.parse(message)
+				redisPipeline.set(key.value, JSON.stringify(msg), {EX: 1800});
+				redisPipeline.zAdd(`channel:${channelId}:messages`, {
+					score: key.score,
+					value: key.value,
+				});
+			}
+			await redisPipeline.exec();
+
 			return json({ limit, page, messages: messages.reverse() });
 		}
 
@@ -41,10 +54,6 @@ export async function GET({ params, url }) {
 				user: {
 					select: {
 						id: true,
-						username: true,
-						surname: true,
-						name: true,
-						profilePicture: true,
 					},
 				},
 			},
@@ -57,7 +66,7 @@ export async function GET({ params, url }) {
 			const redisPipeline = redisClient.multi();
 			for (const message of messagesFromDB) {
 				const messageKey = `message:${message.id}`;
-				redisPipeline.set(messageKey, JSON.stringify(message));
+				redisPipeline.set(messageKey, JSON.stringify(message), {EX: 1800});
 				redisPipeline.zAdd(`channel:${channelId}:messages`, {
 					score: new Date(message.createdAt).getTime(),
 					value: messageKey,
@@ -93,10 +102,6 @@ export async function POST({ params, request }) {
 				user: {
 					select: {
 						id: true,
-						username: true,
-						surname: true,
-						name: true,
-						profilePicture: true,
 					},
 				},
 				channel: {

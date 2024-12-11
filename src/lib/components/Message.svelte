@@ -8,8 +8,6 @@
 
   export let message = null; // Contenu du message
 
-  let defaultProfilePicture = "/images/default-profile.png";
-
   export let setActiveProfile;
   export let activeProfileId = null;
 
@@ -21,10 +19,27 @@
     timeElapsed = formatDistanceToNow(message.createdAt);
   };
 
+  let user = null;
+
+  async function fetchUser() {
+    const res = await fetch(`/api/users/${message.user.id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await res.json();
+    console.log(data)
+    user = data;
+  }
+
   // Initialisation de l'intervalle
-  onMount(() => {
+  onMount(async () => {
     updateElapsed(); // Calcul initial
     const interval = setInterval(updateElapsed, 1000); // Mise à jour toutes les secondes
+
+    await fetchUser();
 
     return () => {
       clearInterval(interval); // Nettoyage lors du démontage
@@ -41,50 +56,56 @@
     }
   }
 
+
+
 </script>
 
-<Card.Root class="relative">
-  <Card.Header
-    class="flex items-center justify-between {myMessage ? 'flex-row' : 'flex-row-reverse'}"
-  >
-    <!-- Conteneur pour la date -->
-    <span class="text-xs sm:text-sm md:text-base text-gray-500 items-top">
+{#if user !== null}
+
+  <Card.Root class="relative">
+    <Card.Header
+      class="flex items-center justify-between {myMessage ? 'flex-row' : 'flex-row-reverse'}"
+    >
+      <!-- Conteneur pour la date -->
+      <span class="text-xs sm:text-sm md:text-base text-gray-500 items-top">
       {timeElapsed}
     </span>
 
-    <!-- Conteneur pour l'image et le nom d'utilisateur -->
-    <div class="flex items-center gap-3 {myMessage ? 'flex-row-reverse' : 'flex-row'}">
-      <div
-        class="relative"
-        on:click={toggleProfileInfo}
-      >
-        <!-- Image de profil -->
-        <img
-          src={message.user.profilePicture ? `http://localhost:5173/${message.user.profilePicture}` : defaultProfilePicture}
-          alt="Profile Picture"
-          class="h-10 w-10 rounded-full border border-gray-300 cursor-pointer"
-        />
-
-        <!-- Infos du profil (affichées au survol) -->
-        <ProfileInfo user={message.user} show={activeProfileId === message.id} position={myMessage} />
-      </div>
-
-      <div class="flex flex-col text-right {myMessage ? 'text-right' : 'text-left'}">
-        <Card.Title
-          class="text-gray-800 text-sm sm:text-base md:text-lg truncate {myMessage ? 'font-bold' : ''}"
+      <!-- Conteneur pour l'image et le nom d'utilisateur -->
+      <div class="flex items-center gap-3 {myMessage ? 'flex-row-reverse' : 'flex-row'}">
+        <div
+          class="relative"
+          on:click={toggleProfileInfo}
         >
-          {myMessage ? "(Moi)" : ""} {message.user.username}
-        </Card.Title>
+          <!-- Image de profil -->
+          <img
+            src={`http://localhost:5173/${user.profilePicture}`}
+            alt="Profile Picture"
+            class="h-10 w-10 rounded-full border border-gray-300 cursor-pointer"
+          />
+
+          <!-- Infos du profil (affichées au survol) -->
+          <ProfileInfo user={user} show={activeProfileId === message.id} position={myMessage} />
+        </div>
+
+        <div class="flex flex-col text-right {myMessage ? 'text-right' : 'text-left'}">
+          <Card.Title
+            class="text-gray-800 text-sm sm:text-base md:text-lg truncate {myMessage ? 'font-bold' : ''}"
+          >
+            {myMessage ? "(Moi)" : ""} {user.username}
+          </Card.Title>
+        </div>
       </div>
-    </div>
-  </Card.Header>
+    </Card.Header>
 
-  <!-- Contenu du message -->
-  <Card.Content class="text-sm sm:text-base md:text-lg text-gray-700">
-    <p>{message.text}</p>
-  </Card.Content>
-</Card.Root>
+    <!-- Contenu du message -->
+    <Card.Content class="text-sm sm:text-base md:text-lg text-gray-700">
+      <p>{message.text}</p>
+    </Card.Content>
+  </Card.Root>
 
+
+{/if}
 <style>
   img {
     object-fit: cover; /* Assure un bon rendu des images */

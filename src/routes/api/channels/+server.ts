@@ -5,7 +5,7 @@ import logger from '$lib/logger';
 import { sortChannels } from '$lib/utils/sort.ts';
 
 // GET: Liste tous les canaux avec leur premier message
-export async function GET({ params, url }) {
+export async function GET({ url }) {
 	if(url.searchParams.get("name") != null && url.searchParams.get("name") != ""){
 		const name = url.searchParams.get("name");
 		try {
