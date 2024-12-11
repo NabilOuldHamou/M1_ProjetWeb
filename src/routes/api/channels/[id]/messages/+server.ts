@@ -6,30 +6,32 @@ import { sortChannels } from '$lib/utils/sort.ts';
 
 export async function GET({ params, url }) {
 	const channelId = params.id;
+	logger.debug(`GET /api/channels/${channelId}/messages`);
 
-	// Gestion des paramètres de pagination
-	const limit = parseInt(url.searchParams.get('limit') || '20'); // Par défaut, 20 messages
-	const page = parseInt(url.searchParams.get('page') || '1'); // Par défaut, page 1
-
+	const limit = parseInt(url.searchParams.get('limit') || '10');
+	const page = parseInt(url.searchParams.get('page') || '1');
 	const offset = (page - 1) * limit;
 
 	try {
-		// Essayer de récupérer les messages du cache Redis
 		logger.debug(`Tentative de récupération des messages du cache pour le channel : ${channelId}`);
-		let redisMessages = await redisClient.zRange(`channel:${channelId}:messages`, offset, limit, {REV:true});
+		const redisMessageKeys = await redisClient.zRange(
+			`channel:${channelId}:messages`,
+			offset,
+			offset + limit - 1,
+			{ REV: true }
+		);
 
-		if (redisMessages && redisMessages.length > 0) {
-			logger.debug(`Messages trouvés dans le cache pour le channel : ${channelId}`);
-			const messages = await redisClient.mGet(redisMessages).then(
-				(messages) => messages.map((m) => JSON.parse(m)).reverse()
+		if (redisMessageKeys.length > 0) {
+			const messages = await Promise.all(
+				redisMessageKeys.map(async (key) => {
+					const message = await redisClient.get(key);
+					return JSON.parse(message);
+				})
 			);
-
-			return json({ limit, page, messages });
-		} else {
-			logger.debug(`Aucun message trouvé dans le cache, récupération depuis MongoDB pour le channel : ${channelId}`);
+			return json({ limit, page, messages: messages.reverse() });
 		}
 
-		// Si aucun message n'est trouvé dans Redis, charger depuis MongoDB
+		logger.debug(`Aucun message trouvé dans le cache, récupération depuis MongoDB pour le channel : ${channelId}`);
 		const messagesFromDB = await prisma.message.findMany({
 			where: { channelId },
 			select: {
@@ -46,23 +48,26 @@ export async function GET({ params, url }) {
 					},
 				},
 			},
-			orderBy: [{ createdAt: 'desc' }],
+			orderBy: { createdAt: 'desc' },
+			skip: offset,
+			take: limit,
 		});
 
 		if (messagesFromDB.length > 0) {
-			// Stocker les messages dans Redis
+			const redisPipeline = redisClient.multi();
 			for (const message of messagesFromDB) {
-				await redisClient.set(`message:${message.id}`, JSON.stringify(message));
-				await redisClient.zAdd(`channel:${channelId}:messages`, {
+				const messageKey = `message:${message.id}`;
+				redisPipeline.set(messageKey, JSON.stringify(message));
+				redisPipeline.zAdd(`channel:${channelId}:messages`, {
 					score: new Date(message.createdAt).getTime(),
-					value: `message:${message.id}`,
+					value: messageKey,
 				});
 			}
 
-			logger.debug(`Messages ajoutés au cache Redis pour le channel : ${channelId}`);
+			await redisPipeline.exec();
 		}
 
-		return json({ limit, page, messages: messagesFromDB });
+		return json({ limit, page, messages: messagesFromDB.reverse() });
 	} catch (err) {
 		logger.error(`Erreur lors de la récupération des messages : ${err.message}`);
 		return json({ error: 'Erreur lors de la récupération des messages' }, { status: 500 });
@@ -112,12 +117,18 @@ export async function POST({ params, request }) {
 
 		//update the channels cache with the new message
 		const cachedChannels = await redisClient.get('channels');
-		let channels = JSON.parse(cachedChannels);
+		let channels = cachedChannels ? JSON.parse(cachedChannels) : [];
 		const channel = channels.find((c) => c.id === channelId);
-		channel.lastMessage = newMessage;
-		channel.lastUpdate = newMessage.createdAt;
-		channels = sortChannels(channels);
-		await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
+		if(channel){
+			channel.lastMessage = newMessage;
+			channel.lastUpdate = newMessage.createdAt;
+			channels = sortChannels(channels);
+			await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
+		}else{
+			channels = [newMessage.channel, ...channels];
+			await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
+		}
+
 
 		logger.debug(`Nouveau message ajouté pour le channel : ${channelId}`);
 		return json(newMessage, { status: 201 });
