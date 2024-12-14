@@ -13,6 +13,8 @@
     export let users = data.users;
 
 
+    let isAtBottom = true;
+    let previousHeight = 0;
     let scrollContainer: HTMLElement;
     let messageText = '';
 
@@ -36,11 +38,12 @@
 
         if (response.ok) {
             let newMessage =await response.json();
-
             // Envoyer le message avec les sockets (à implémenter)
             socket.emit('new-message', newMessage);
             console.log('Message envoyé avec succès');
             messageText = '';
+            isAtBottom = true;
+            await scrollToBottom();
         }else{
             console.log('Erreur lors de l\'envoi du message');
         }
@@ -50,11 +53,11 @@
     let isLoading = false;
 
     async function loadMoreMessages() {
-        if (isLoading) return;
-        isLoading = true;
 
-        // Sauvegarder la hauteur actuelle
-        const previousHeight = scrollContainer.scrollHeight;
+        if (isLoading) {
+            return;
+        }
+        isLoading = true;
 
         try {
             const response = await fetch(`/api/channels/${data.channelId}/messages?page=${currentPage + 1}&limit=10`, {
@@ -81,26 +84,23 @@
         } finally {
             isLoading = false;
 
-            // Réajuster la position de défilement
-            await tick(); // Attendre la mise à jour du DOM
-            const newHeight = scrollContainer.scrollHeight;
-            scrollContainer.scrollTop = newHeight - previousHeight;
+
+
         }
     }
 
     function handleScroll(event: Event) {
         const container = event.target as HTMLElement;
-        if (container.scrollTop === 0 && !isLoading) {
+
+        // Vérifiez si l'utilisateur est proche du bas du conteneur
+        const threshold = 50; // Pixels avant d'atteindre le bas
+        const position = container.scrollHeight - container.scrollTop - container.clientHeight;
+
+        isAtBottom = position <= threshold;
+        if(container.scrollTop <= threshold){
             loadMoreMessages();
         }
     }
-
-    onMount(() => {
-        socket.on("new-message", (message) => {
-            messages = [...messages , message ];
-        });
-        scrollToBottom(scrollContainer);
-    });
 
     async function handleEnter(event: KeyboardEvent) {
         if (event.key === 'Enter') {
@@ -108,15 +108,41 @@
         }
     }
 
-    const scrollToBottom = node => {
-        const scroll = () => node.scroll({
-            top: node.scrollHeight,
-            behavior: 'smooth',
-        });
-        scroll();
+    async function scrollToBottom() {
+        if (scrollContainer && isAtBottom) {
+            await tick();
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }
+    }
 
-        return { update: scroll }
-    };
+
+
+    onMount(() => {
+        if (scrollContainer) {
+            const observer = new MutationObserver(async () => {
+                await scrollToBottom();
+                if(scrollContainer.scrollTop <= 5){
+                    const newHeight = scrollContainer.scrollHeight;
+                    if (newHeight !== previousHeight) {
+                        scrollContainer.scrollTop = scrollContainer.scrollHeight - previousHeight;
+                        previousHeight = newHeight;
+                    }
+                }
+            });
+
+            observer.observe(scrollContainer, { childList: true, subtree: true });
+
+            isAtBottom = true;
+
+            return () => observer.disconnect();
+        }
+    });
+
+
+    socket.on("new-message", async (message) => {
+        messages = [...messages , message ];
+        await tick();
+    });
 
 </script>
 
@@ -144,13 +170,11 @@
         <div
           class="m-10 flex flex-col gap-5 overflow-y-auto flex-grow "
           bind:this={scrollContainer}
-          use:scrollToBottom={messages}
           on:scroll={handleScroll}
         >
             {#if isLoading}
                 <div class="loading-indicator">Chargement...</div>
             {/if}
-            <!-- Afficher les messages (mock d'un utilisateur sélectionné ou aucun message par défaut) -->
             {#if messages !== undefined && messages.length > 0}
                 {#each messages as message}
                     <Message
@@ -183,5 +207,8 @@
         text-align: center;
         padding: 10px;
         color: gray;
+    }
+    .overflow-y-auto {
+        scroll-behavior: smooth; /* Défilement fluide */
     }
 </style>

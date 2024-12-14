@@ -1,6 +1,6 @@
 <script lang="ts">
   import * as Card from "$lib/components/ui/card";
-  import { formatDistanceToNow } from "$lib/utils/date.js";
+  import { formatDistanceToNow } from '$lib/utils/date.js';
   import { onMount } from "svelte";
   import ProfileInfo from "$lib/components/ui/ProfileInfo.svelte"; // Importer le composant ProfileInfo
 
@@ -10,14 +10,6 @@
 
   export let setActiveProfile;
   export let activeProfileId = null;
-
-  // Temps écoulé (calculé périodiquement)
-  let timeElapsed: string;
-
-  // Fonction pour mettre à jour le temps écoulé
-  const updateElapsed = () => {
-    timeElapsed = formatDistanceToNow(message.createdAt);
-  };
 
   let user = null;
 
@@ -30,21 +22,8 @@
     });
 
     const data = await res.json();
-    console.log(data)
     user = data;
   }
-
-  // Initialisation de l'intervalle
-  onMount(async () => {
-    updateElapsed(); // Calcul initial
-    const interval = setInterval(updateElapsed, 1000); // Mise à jour toutes les secondes
-
-    await fetchUser();
-
-    return () => {
-      clearInterval(interval); // Nettoyage lors du démontage
-    };
-  });
 
   function toggleProfileInfo() {
     if (activeProfileId === message.id) {
@@ -56,7 +35,23 @@
     }
   }
 
+  let timeElapsed: string;
 
+  // Fonction pour mettre à jour le temps écoulé
+  const updateElapsed = () => {
+    timeElapsed = formatDistanceToNow(message.createdAt);
+  };
+
+  // Initialisation de l'intervalle
+  onMount(() => {
+    fetchUser();
+    updateElapsed(); // Calcul initial
+    const interval = setInterval(updateElapsed, 1000); // Mise à jour toutes les secondes
+
+    return () => {
+      clearInterval(interval); // Nettoyage lors du démontage
+    };
+  });
 
 </script>
 
