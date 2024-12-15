@@ -4,13 +4,16 @@
     import PaperPlane from "svelte-radix/PaperPlane.svelte";
     import Message from "$lib/components/Message.svelte";
     import UserChat from '$lib/components/ui/UserChat.svelte';
-    import { onMount, tick } from 'svelte';
+    import { onMount, tick, onDestroy } from 'svelte';
     import { initSocket } from '$lib/stores/socket';
     import { ArrowLeft } from 'lucide-svelte';
 
     export let data;
     export let messages = data.messages.messages;
-    export let users = data.users;
+    let user = data.user;
+
+    const socket = initSocket(); // Initialiser le socket
+    let users= [];
 
 
     let isAtBottom = true;
@@ -23,8 +26,6 @@
     function setActiveProfile(id) {
         activeProfileId = id;
     }
-
-    let socket = initSocket(); // Initialiser le socket
 
     async function sendMessage() {
         // Appel API pour envoyer le message
@@ -69,7 +70,6 @@
 
             if (response.ok) {
                 const newMessages = await response.json();
-                console.log(newMessages);
                 if(newMessages.messages.length <= 0){
                     console.log('Pas d\'autres anciens messages');
                     return;
@@ -108,6 +108,20 @@
         }
     }
 
+    let stopWritingTimeout;
+
+    function handleWriting() {
+        clearTimeout(stopWritingTimeout);
+        socket.emit('writing', { userId: data.userId, channelId: data.channelId });
+        stopWritingTimeout = setTimeout(() => {
+            handleStopWriting();
+        }, 2000); // Attendre 2 secondes d'inactivité avant d'émettre stop-writing
+    }
+
+    function handleStopWriting() {
+        socket.emit('stop-writing', { userId: data.userId, channelId: data.channelId });
+    }
+
     async function scrollToBottom() {
         if (scrollContainer && isAtBottom) {
             await tick();
@@ -117,7 +131,7 @@
 
 
 
-    onMount(() => {
+    onMount(async () => {
         if (scrollContainer) {
             const observer = new MutationObserver(async () => {
                 await scrollToBottom();
@@ -138,11 +152,69 @@
         }
     });
 
+    onDestroy(() => {
+        socket.emit('leave-channel', { userId: data.userId, channelId: data.channelId });
+        socket.disconnect(); // Déconnexion propre du socket
+    });
 
+    // Ecoute des événements socket
     socket.on("new-message", async (message) => {
-        messages = [...messages , message ];
+        messages = [...messages, message]; // Ajouter le message à l'historique
         await tick();
     });
+
+    socket.on("load-users-channel", async (us) => {
+        users = us;
+        await tick();
+    });
+
+    socket.on("connect", () => {
+        socket.emit('new-user-join', { user:{ ...user, socketId:socket.id, state:"En ligne" }, channelId: data.channelId });
+    });
+
+    socket.on('user-writing', async (userId) => {
+        console.log('user-writing reçu pour userId:', userId);
+
+        // On met à jour l'état de l'utilisateur
+        users = users.map((u) => {
+            if (u.id === userId) {
+                // Mettre à jour le state
+                return { ...u, state: "Ecrit" }; // On recrée l'objet pour garantir la réactivité
+            }
+            return u;
+        });
+
+        // On recrée une nouvelle référence du tableau `users`
+        users = [...users]; // Cela force Svelte à détecter le changement dans la liste
+
+        console.log('Utilisateurs après mise à jour de l\'état:', users);
+
+        // Forcer une mise à jour avec tick
+        await tick();
+    });
+
+    socket.on('user-stop-writing', async (userId) => {
+        console.log('user-stop-writing reçu pour userId:', userId);
+
+        // On met à jour l'état de l'utilisateur
+        users = users.map((u) => {
+            if (u.id === userId) {
+                // Mettre à jour le state
+                return { ...u, state: "En ligne" }; // On recrée l'objet pour garantir la réactivité
+            }
+            return u;
+        });
+
+        // On recrée une nouvelle référence du tableau `users`
+        users = [...users]; // Cela force Svelte à détecter le changement dans la liste
+
+        console.log('Utilisateurs après mise à jour de l\'état:', users);
+
+        // Forcer une mise à jour avec tick
+        await tick();
+    });
+
+
 
 </script>
 
@@ -154,11 +226,9 @@
             <h2 class="text-3xl font-bold">Utilisateurs</h2>
         </div>
         <div class="flex flex-col m-5 gap-2">
-            {#each users as user}
+            {#each users as u (u.id)}
                 <UserChat
-                  profilePicture={user.profilePicture}
-                  username={user.username}
-                  status={user.status}
+                  user={u}
                 />
             {/each}
         </div>
@@ -178,7 +248,7 @@
             {#if messages !== undefined && messages.length > 0}
                 {#each messages as message}
                     <Message
-                      myMessage={data.userId === message.user.id}
+                      userId={data.userId}
                       message={message}
                       activeProfileId={activeProfileId}
                       setActiveProfile={setActiveProfile}
@@ -191,7 +261,14 @@
 
         <!-- Input pour envoyer un message -->
         <div class="px-10 py-5 w-full flex gap-2 border-t">
-            <Textarea class="h-16 resize-none flex-grow" placeholder="Écrivez un message..." bind:value={messageText} on:keypress={handleEnter}/>
+            <Textarea
+              class="h-16 resize-none flex-grow"
+              placeholder="Écrivez un message..."
+              bind:value={messageText}
+              on:keypress={handleEnter}
+              on:input={handleWriting}
+              on:blur={handleStopWriting}
+            />
             <Button size="icon" class="h-16 w-16 bg-blue-500 hover:bg-blue-600 h-full" on:click={sendMessage}>
                 <PaperPlane class="h-6 w-6" />
             </Button>

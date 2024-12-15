@@ -4,7 +4,7 @@
   import { onMount } from "svelte";
   import ProfileInfo from "$lib/components/ui/ProfileInfo.svelte"; // Importer le composant ProfileInfo
 
-  export let myMessage: boolean; // Si c'est le message de l'utilisateur courant
+  export let userId: string; // Si c'est le message de l'utilisateur courant
 
   export let message = null; // Contenu du message
 
@@ -12,6 +12,8 @@
   export let activeProfileId = null;
 
   let user = null;
+
+  let myMessage;
 
   async function fetchUser() {
     const res = await fetch(`/api/users/${message.user.id}`, {
@@ -47,7 +49,7 @@
     fetchUser();
     updateElapsed(); // Calcul initial
     const interval = setInterval(updateElapsed, 1000); // Mise à jour toutes les secondes
-
+    myMessage = message.user.id === userId; // Vérifier si c'est le message de l'utilisateur courant
     return () => {
       clearInterval(interval); // Nettoyage lors du démontage
     };

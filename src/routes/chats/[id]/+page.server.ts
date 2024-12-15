@@ -7,18 +7,27 @@ export async function load({ fetch, params, locals }) {
 			}
 		});
 		const messages = await res.json();
+		const resUser = await fetch(`/api/users/${locals.userId}`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+		const user = await resUser.json();
 
 		return {
 			messages,
 			channelId: params.id,
-			userId: locals.userId
+			userId: locals.userId,
+			user: user
 		}
 	}catch (error) {
 		console.error('Erreur lors du chargement des messages:', error);
 		return {
 			messages: [],
 			channelId: params.id,
-			userId: locals.userId
+			userId: locals.userId,
+			user: {}
 		};
 	}
 }
