@@ -89,7 +89,7 @@ export async function POST({ params, request }) {
 
 	try {
 		// Créer un nouveau message dans MongoDB
-		const newMessage = await prisma.message.create({
+		let newMessage = await prisma.message.create({
 			data: {
 				userId,
 				channelId,
@@ -123,17 +123,35 @@ export async function POST({ params, request }) {
 		//update the channels cache with the new message
 		const cachedChannels = await redisClient.get('channels');
 		let channels = cachedChannels ? JSON.parse(cachedChannels) : [];
-		const channel = channels.find((c) => c.id === channelId);
+		let channel = channels.find((c) => c.id === channelId);
 		if(channel){
-			channel.lastMessage = newMessage;
+			channel.lastMessage = {
+				id: newMessage.id,
+				text: newMessage.text,
+				user: newMessage.user,
+				createdAt: newMessage.createdAt,
+			};
 			channel.lastUpdate = newMessage.createdAt;
-			channels = sortChannels(channels);
-			await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
-		}else{
-			channels = [newMessage.channel, ...channels];
-			await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
-		}
+			channel.messages = undefined;
 
+		}else{
+			channel = {...newMessage.channel, lastMessage: {
+				id: newMessage.id,
+				text: newMessage.text,
+				user: newMessage.user,
+				createdAt: newMessage.createdAt,
+				}, lastUpdate: newMessage.createdAt, messages: undefined};
+		}
+		channels = [channel, ...channels];
+		await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
+
+		newMessage.channel = {
+			id: newMessage.channel.id,
+			name: newMessage.channel.name,
+			lastMessage: channel.lastMessage,
+			lastUpdate: channel.lastUpdate,
+			messages: undefined
+		};
 
 		logger.debug(`Nouveau message ajouté pour le channel : ${channelId}`);
 		return json(newMessage, { status: 201 });

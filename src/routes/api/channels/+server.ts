@@ -25,8 +25,6 @@ export async function GET({ url }) {
 				},
 			});
 
-			console.log(canaux);
-
 			canaux = canaux.map((canaux) => {
 				return {
 					...canaux,
@@ -36,7 +34,6 @@ export async function GET({ url }) {
 			});
 
 			canaux = sortChannels(canaux);
-			console.log(canaux);
 
 			return json(canaux);
 
@@ -46,38 +43,46 @@ export async function GET({ url }) {
 		}
 	}else{
 		try {
+
+			let channels = [];
+
 			const cachedChannels = await redisClient.get('channels');
 
 			if (cachedChannels != null) {
 				logger.debug('Cache entry found, fetching channels from cache');
-				return json(JSON.parse(cachedChannels));
+				channels = JSON.parse(cachedChannels);
+			}else{
+				logger.debug('No cache entry was found, fetching channels from database');
+			}
+			if(channels.length < 10){
+				logger.debug('Fetching channels from database to fill cache');
+				let canaux = await prisma.channel.findMany({
+					include: {
+						messages: {
+							take: 1, // Récupère le dernier message
+							orderBy: { createdAt: 'desc' }, // Trie par date décroissante
+						},
+					},
+				});
+
+				canaux = canaux.map((canaux) => {
+					return {
+						...canaux,
+						lastMessage: canaux.messages.length > 0 ? canaux.messages[0] : null,
+						messages: undefined
+					};
+				});
+
+				channels = channels.concat(canaux);
+
+				channels = sortChannels(channels);
+
+				channels = channels.slice(0, 10);
+
+				await redisClient.set('channels', JSON.stringify(channels), { EX: 3600 });
 			}
 
-			logger.debug('No cache entry was found, fetching channels from database');
-			let canaux = await prisma.channel.findMany({
-				include: {
-					messages: {
-						take: 1, // Récupère le dernier message
-						orderBy: { createdAt: 'desc' }, // Trie par date décroissante
-					},
-				},
-			});
-
-			canaux = canaux.map((canaux) => {
-				return {
-					...canaux,
-					lastMessage: canaux.messages.length > 0 ? canaux.messages[0] : null,
-					messages: undefined
-				};
-			});
-
-			canaux = sortChannels(canaux);
-			console.log(canaux);
-
-			logger.debug('Caching channels with EX of 3600 secs');
-			await redisClient.set('channels', JSON.stringify(canaux), { EX: 3600 });
-
-			return json(canaux);
+			return json(channels);
 
 		} catch (err) {
 			logger.error(err)

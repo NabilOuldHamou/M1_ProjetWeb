@@ -19,11 +19,18 @@
 	});
 
 	socket.on("new-message", (message) => {
-		const channel = channels.find((channel) => channel.id === message.channel.id);
-		if (channel) {
-			channel.lastMessage = message;
-			channel.lastUpdate = message.createdAt;
+		const channel = message.channel
+		if(channels.find(c => c.id === channel.id)) {
+			channels = channels.map((c) => {
+				if (c.id === channel.id) {
+					c.lastMessage = message;
+					c.lastUpdate = message.createdAt;
+				}
+				return c;
+			});
 			channels = [channel, ...channels.filter((c) => c.id !== channel.id)];
+		}else{
+			channels = [channel, ...channels];
 		}
 	});
 

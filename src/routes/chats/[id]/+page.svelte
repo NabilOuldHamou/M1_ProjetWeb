@@ -50,18 +50,21 @@
         }
     }
 
-    let currentPage = 1;
     let isLoading = false;
+    const limit = 10;
 
     async function loadMoreMessages() {
-
         if (isLoading) {
             return;
         }
         isLoading = true;
 
         try {
-            const response = await fetch(`/api/channels/${data.channelId}/messages?page=${currentPage + 1}&limit=10`, {
+            // Calculer la page à charger en fonction du nombre total de messages existants
+            const totalMessages = messages.length;
+            const pageToLoad = Math.floor(totalMessages / limit) + 1;
+
+            const response = await fetch(`/api/channels/${data.channelId}/messages?page=${pageToLoad}&limit=${limit}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,22 +73,31 @@
 
             if (response.ok) {
                 const newMessages = await response.json();
-                if(newMessages.messages.length <= 0){
-                    console.log('Pas d\'autres anciens messages');
+
+                if (newMessages.messages.length <= 0) {
+                    console.log("Pas d'autres anciens messages");
                     return;
                 }
-                messages = [...newMessages.messages, ...messages]; // Ajouter les nouveaux messages en haut
-                currentPage++;
+
+                // Éviter les doublons en filtrant les messages déjà présents
+                const existingMessageIds = new Set(messages.map((msg) => msg.id));
+                const filteredMessages = newMessages.messages.filter(
+                  (msg) => !existingMessageIds.has(msg.id)
+                );
+
+                if (filteredMessages.length > 0) {
+                    messages = [...filteredMessages, ...messages]; // Ajouter les nouveaux messages en haut
+                    console.log(`${filteredMessages.length} nouveaux messages ajoutés`);
+                } else {
+                    console.log("Aucun nouveau message à ajouter (tous déjà chargés)");
+                }
             } else {
-                console.error('Erreur lors du chargement des anciens messages');
+                console.error("Erreur lors du chargement des anciens messages");
             }
         } catch (error) {
-            console.error('Erreur réseau lors du chargement des messages:', error);
+            console.error("Erreur réseau lors du chargement des messages:", error);
         } finally {
             isLoading = false;
-
-
-
         }
     }
 
@@ -97,7 +109,7 @@
         const position = container.scrollHeight - container.scrollTop - container.clientHeight;
 
         isAtBottom = position <= threshold;
-        if(container.scrollTop <= threshold){
+        if(container.scrollTop <= 0){
             loadMoreMessages();
         }
     }
@@ -129,12 +141,15 @@
         }
     }
 
-
+    let isFirstLoad = 0;
 
     onMount(async () => {
         if (scrollContainer) {
             const observer = new MutationObserver(async () => {
-                await scrollToBottom();
+                if (isFirstLoad <= messages.length) {
+                    await scrollToBottom(); // Appel à scrollToBottom() seulement lors du premier chargement
+                    isFirstLoad++; // Une fois les messages chargés pour la première fois, on empêche les appels suivants
+                }
                 if(scrollContainer.scrollTop <= 5){
                     const newHeight = scrollContainer.scrollHeight;
                     if (newHeight !== previousHeight) {
