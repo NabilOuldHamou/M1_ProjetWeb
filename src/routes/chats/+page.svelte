@@ -35,22 +35,18 @@
 	});
 
 	function openProfileCard() {
-		console.log('openProfileCard');
 		showProfileCard = true;  // Inverser l'état pour afficher/masquer le ProfilCard
 	}
 
 	function closeProfileCard() {
-		console.log('closeProfileCard');
 		showProfileCard = false;  // Inverser l'état pour afficher/masquer le ProfilCard
 	}
 
 	function openCreateChat() {
-		console.log('openCreateChat');
 		showCreateChat = true;  // Afficher le composant CreateChat
 	}
 
 	function closeCreateChat() {
-		console.log('closeCreateChat');
 		showCreateChat = false;  // Fermer le composant CreateChat
 	}
 
@@ -112,7 +108,7 @@
 
 </div>
 <CreateChat show={showCreateChat} socket={socket} onClose={closeCreateChat} listRef={chatListRef} />
-<ProfileCard user={data.user} show={showProfileCard} onClose={closeProfileCard} />
+<ProfileCard user={data.user} userId={data.userId} show={showProfileCard} onClose={closeProfileCard} />
 
 <style>
     .h-full {

@@ -75,6 +75,12 @@ export async function GET({ url }) {
 
 				channels = channels.concat(canaux);
 
+				channels = channels.filter((channel, index, self) =>
+					index === self.findIndex((t) => (
+						t.id === channel.id
+					))
+				);
+
 				channels = sortChannels(channels);
 
 				channels = channels.slice(0, 10);

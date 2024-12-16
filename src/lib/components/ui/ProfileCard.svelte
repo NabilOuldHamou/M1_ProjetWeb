@@ -2,10 +2,10 @@
 	import Button  from '$lib/components/ui/button/button.svelte';
 
 	export let user;
+	export let userId;
 	export let show = false; // Contrôle si la carte est visible
 	export let onClose = () => {}; // Fonction pour fermer la carte
 
-	console.log(user)
 
 	const disconnect = async () => {
 		try {
@@ -35,10 +35,11 @@
 			<div class="flex flex-col gap-2">
 				<div class="profile-header">
 					<!-- Image de profil -->
-					<img src={user.profilePicture} alt="Profile" class="profile-image" />
+					<img src="http://localhost:5173/{user.profilePicture}" alt="Profile" class="profile-image" />
 					<h2 id="profile-card-title" class="profile-name">{user.username}</h2>
 				</div>
 				<p>{user.name} {user.surname}</p>
+				<p>{user.email}</p>
 			</div>
 
 			<div class="flex flex-col gap-3">

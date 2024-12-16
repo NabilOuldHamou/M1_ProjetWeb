@@ -1,4 +1,4 @@
-export async function load({ fetch }) {
+export async function load({ fetch, locals }) {
 
 	try {
 			// Appel API ou récupération de données
@@ -12,12 +12,14 @@ export async function load({ fetch }) {
 
 		// Retourner les données à la page sous forme de props
 		return {
-			channels
+			channels,
+			userId: locals.userId
 		};
 	} catch (error) {
 		console.error('Erreur lors du chargement des canaux:', error);
 		return {
-			channels: []
+			channels: [],
+			userId: locals.userId
 		};
 	}
 }
