@@ -108,7 +108,7 @@
 
 </div>
 <CreateChat show={showCreateChat} socket={socket} onClose={closeCreateChat} listRef={chatListRef} />
-<ProfileCard user={data.user} userId={data.userId} show={showProfileCard} onClose={closeProfileCard} />
+<ProfileCard user={data.user} userSessionId={data.userId} show={showProfileCard} onClose={closeProfileCard} />
 
 <style>
     .h-full {

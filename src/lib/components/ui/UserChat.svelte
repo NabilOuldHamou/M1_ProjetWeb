@@ -1,8 +1,13 @@
 <script lang="ts">
 	export let user;
+
+	export let openProfileCard = () => {};
 </script>
 
-<div class="flex items-center gap-4 justify-between p-3 cursor-pointer hover:bg-gray-100 rounded-lg border border-gray-300 shadow-sm">
+<div
+	class="flex items-center gap-4 justify-between p-3 cursor-pointer hover:bg-gray-100 rounded-lg border border-gray-300 shadow-sm"
+	on:click={openProfileCard}
+>
 	<div class="flex items-center gap-4">
 		<img
 			src={`http://localhost:5173/${user.profilePicture}`}

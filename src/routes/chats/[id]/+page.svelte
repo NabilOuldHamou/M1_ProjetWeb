@@ -8,6 +8,7 @@
     import { initSocket } from '$lib/stores/socket';
     import { ArrowLeft } from 'lucide-svelte';
     import { messagesStore } from '$lib/stores/messagesStore';
+    import ProfileCard from '$lib/components/ui/ProfileCard.svelte';
 
     export let data;
 
@@ -22,6 +23,25 @@
     let messageText = '';
 
     let activeProfileId = null;
+    let userChatSelected = {
+        id: '',
+        username: '',
+        name: '',
+        surname: '',
+        email: '',
+        profilePicture: '',
+        state: '',
+    };
+    let showProfileCard = false;
+
+    function openProfileCard(user) {
+        userChatSelected = user;
+        showProfileCard = true;
+    }
+
+    function closeProfileCard() {
+        showProfileCard = false;
+    }
 
     function setActiveProfile(id) {
         activeProfileId = id;
@@ -201,7 +221,7 @@
 
     messagesStore.subscribe(async () => {
         await tick();
-        await scrollToBottom();
+        await scrollToBottom(); // Scroll to the bottom after the message is added
     });
 
     onMount(async () => {
@@ -222,6 +242,7 @@
             {#each users as u (u.id)}
                 <UserChat
                   user={u}
+                  openProfileCard={() => openProfileCard(u)}
                 />
             {/each}
         </div>
@@ -267,6 +288,8 @@
         </div>
     </div>
 </div>
+
+<ProfileCard user={userChatSelected} userSessionId={data.userId} show={showProfileCard} onClose={closeProfileCard}></ProfileCard>
 
 <style>
     .h-full {
