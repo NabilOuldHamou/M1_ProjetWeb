@@ -4,20 +4,20 @@
     import PaperPlane from "svelte-radix/PaperPlane.svelte";
     import Message from "$lib/components/Message.svelte";
     import UserChat from '$lib/components/ui/UserChat.svelte';
-    import { onMount, tick, onDestroy } from 'svelte';
+    import { tick, onDestroy, onMount } from 'svelte';
     import { initSocket } from '$lib/stores/socket';
     import { ArrowLeft } from 'lucide-svelte';
+    import { messagesStore } from '$lib/stores/messagesStore';
 
     export let data;
-    export let messages = data.messages.messages;
+
+    messagesStore.set(data.messages.messages);
+
     let user = data.user;
 
     const socket = initSocket(); // Initialiser le socket
     let users= [];
 
-
-    let isAtBottom = true;
-    let previousHeight = 0;
     let scrollContainer: HTMLElement;
     let messageText = '';
 
@@ -43,8 +43,6 @@
             socket.emit('new-message', newMessage);
             console.log('Message envoyé avec succès');
             messageText = '';
-            isAtBottom = true;
-            await scrollToBottom();
         }else{
             console.log('Erreur lors de l\'envoi du message');
         }
@@ -61,7 +59,7 @@
 
         try {
             // Calculer la page à charger en fonction du nombre total de messages existants
-            const totalMessages = messages.length;
+            const totalMessages = $messagesStore.length;
             const pageToLoad = Math.floor(totalMessages / limit) + 1;
 
             const response = await fetch(`/api/channels/${data.channelId}/messages?page=${pageToLoad}&limit=${limit}`, {
@@ -80,13 +78,13 @@
                 }
 
                 // Éviter les doublons en filtrant les messages déjà présents
-                const existingMessageIds = new Set(messages.map((msg) => msg.id));
+                const existingMessageIds = new Set($messagesStore.map((msg) => msg.id));
                 const filteredMessages = newMessages.messages.filter(
                   (msg) => !existingMessageIds.has(msg.id)
                 );
 
                 if (filteredMessages.length > 0) {
-                    messages = [...filteredMessages, ...messages]; // Ajouter les nouveaux messages en haut
+                    $messagesStore = [...filteredMessages, ...$messagesStore]; // Ajouter les nouveaux messages en haut
                     console.log(`${filteredMessages.length} nouveaux messages ajoutés`);
                 } else {
                     console.log("Aucun nouveau message à ajouter (tous déjà chargés)");
@@ -98,19 +96,6 @@
             console.error("Erreur réseau lors du chargement des messages:", error);
         } finally {
             isLoading = false;
-        }
-    }
-
-    function handleScroll(event: Event) {
-        const container = event.target as HTMLElement;
-
-        // Vérifiez si l'utilisateur est proche du bas du conteneur
-        const threshold = 50; // Pixels avant d'atteindre le bas
-        const position = container.scrollHeight - container.scrollTop - container.clientHeight;
-
-        isAtBottom = position <= threshold;
-        if(container.scrollTop <= 0){
-            loadMoreMessages();
         }
     }
 
@@ -134,38 +119,24 @@
         socket.emit('stop-writing', { userId: data.userId, channelId: data.channelId });
     }
 
-    async function scrollToBottom() {
-        if (scrollContainer && isAtBottom) {
-            await tick();
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    async function scrollToBottom(retries = 3) {
+        await tick();
+
+        const attemptScroll = () => {
+            if (scrollContainer) {
+                scrollContainer.scrollTo({
+                    top: scrollContainer.scrollHeight,
+                    behavior: 'smooth',
+                });
+            }
+        };
+
+        attemptScroll();
+
+        if (retries > 0) {
+            requestAnimationFrame(() => scrollToBottom(retries - 1));
         }
     }
-
-    let isFirstLoad = 0;
-
-    onMount(async () => {
-        if (scrollContainer) {
-            const observer = new MutationObserver(async () => {
-                if (isFirstLoad <= messages.length) {
-                    await scrollToBottom(); // Appel à scrollToBottom() seulement lors du premier chargement
-                    isFirstLoad++; // Une fois les messages chargés pour la première fois, on empêche les appels suivants
-                }
-                if(scrollContainer.scrollTop <= 5){
-                    const newHeight = scrollContainer.scrollHeight;
-                    if (newHeight !== previousHeight) {
-                        scrollContainer.scrollTop = scrollContainer.scrollHeight - previousHeight;
-                        previousHeight = newHeight;
-                    }
-                }
-            });
-
-            observer.observe(scrollContainer, { childList: true, subtree: true });
-
-            isAtBottom = true;
-
-            return () => observer.disconnect();
-        }
-    });
 
     onDestroy(() => {
         socket.emit('leave-channel', { userId: data.userId, channelId: data.channelId });
@@ -174,9 +145,11 @@
 
     // Ecoute des événements socket
     socket.on("new-message", async (message) => {
-        messages = [...messages, message]; // Ajouter le message à l'historique
+        $messagesStore = [...$messagesStore, message]; // Add the new message to the store
         await tick();
+        await scrollToBottom(); // Scroll to the bottom after the message is added
     });
+
 
     socket.on("load-users-channel", async (us) => {
         users = us;
@@ -211,7 +184,6 @@
     socket.on('user-stop-writing', async (userId) => {
         console.log('user-stop-writing reçu pour userId:', userId);
 
-        // On met à jour l'état de l'utilisateur
         users = users.map((u) => {
             if (u.id === userId) {
                 // Mettre à jour le state
@@ -220,16 +192,22 @@
             return u;
         });
 
-        // On recrée une nouvelle référence du tableau `users`
         users = [...users]; // Cela force Svelte à détecter le changement dans la liste
 
         console.log('Utilisateurs après mise à jour de l\'état:', users);
 
-        // Forcer une mise à jour avec tick
         await tick();
     });
 
+    messagesStore.subscribe(async () => {
+        await tick();
+        await scrollToBottom();
+    });
 
+    onMount(async () => {
+        await tick();
+        await scrollToBottom();
+    });
 
 </script>
 
@@ -253,15 +231,14 @@
     <div class="flex-1 flex flex-col h-full">
         <!-- Messages -->
         <div
-          class="m-10 flex flex-col gap-5 overflow-y-auto flex-grow "
+          class="m-10 flex flex-col gap-5 overflow-auto flex-grow"
           bind:this={scrollContainer}
-          on:scroll={handleScroll}
         >
             {#if isLoading}
                 <div class="loading-indicator">Chargement...</div>
             {/if}
-            {#if messages !== undefined && messages.length > 0}
-                {#each messages as message}
+            {#if $messagesStore !== undefined && $messagesStore.length > 0}
+                {#each $messagesStore as message}
                     <Message
                       userId={data.userId}
                       message={message}
