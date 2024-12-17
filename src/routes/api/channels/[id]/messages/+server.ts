@@ -140,7 +140,6 @@ export async function POST({ params, request }) {
 		let channels = cachedChannels ? JSON.parse(cachedChannels) : [];
 		let channel = channels.find((c) => c.id === channelId);
 		if(channel){
-			console.log('channel found')
 			channel.lastMessage = {
 				id: newMessage.id,
 				text: newMessage.text,
