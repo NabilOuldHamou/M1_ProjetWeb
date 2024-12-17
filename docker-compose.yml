@@ -1,4 +1,19 @@
 services:
+  app:
+    build: .
+    hostname: chat-app
+    restart: always
+    environment:
+      - DATABASE_URL=mongodb://temp-root-username:temp-password@mongodb:27017/chat_projetweb
+      - JWT_SECRET=1f49ba5426afebd6e27eed416d0c31925ca5c4dc39ab4fdea514c8a858312608
+    ports:
+      - "3000:3000"
+    networks:
+      - app_network
+    depends_on:
+      - mongodb
+      - redis
+
   mongodb:
     build: ./mongodb_rs
     hostname: mongodb
@@ -15,11 +30,11 @@ services:
       - mongo-data:/data/db/
       - mongo-logs:/var/log/mongodb/
     networks:
-      - mongodb_network
+      - app_network
 
   redis:
     image: redis:latest
-    hostname: redis
+    hostname: redis-server
     restart: always
     ports:
       - "6379:6379"
@@ -29,11 +44,11 @@ services:
     volumes:
       - redis-data:/root/redis
     networks:
-      - redis_network
+      - app_network
 
 networks:
-  mongodb_network:
-  redis_network:
+  app_network:
+    driver: bridge
 
 volumes:
   mongo-data:
