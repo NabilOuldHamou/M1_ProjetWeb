@@ -77,6 +77,10 @@
         }
         isLoading = true;
 
+        const previousMessages = $messagesStore;
+
+        let newMessages = [];
+
         try {
             // Calculer la page à charger en fonction du nombre total de messages existants
             const totalMessages = $messagesStore.length;
@@ -90,7 +94,7 @@
             });
 
             if (response.ok) {
-                const newMessages = await response.json();
+                newMessages = await response.json();
 
                 if (newMessages.messages.length <= 0) {
                     console.log("Pas d'autres anciens messages");
@@ -116,6 +120,23 @@
             console.error("Erreur réseau lors du chargement des messages:", error);
         } finally {
             isLoading = false;
+            await tick();
+            const filteredNewMessages = newMessages.messages.filter((msg) => {
+                return !previousMessages.some((m) => m.id === msg.id);
+            });
+            scrollContainer.scrollTo({
+                top: filteredNewMessages.length*300,
+            });
+
+        }
+    }
+
+    function handleScroll() {
+        if (scrollContainer) {
+            // Détection quand on est en haut du scroll
+            if (scrollContainer.scrollTop <= 0 && !isLoading) {
+                loadMoreMessages();
+            }
         }
     }
 
@@ -139,7 +160,7 @@
         socket.emit('stop-writing', { userId: data.userId, channelId: data.channelId });
     }
 
-    async function scrollToBottom(retries = 3) {
+    async function scrollToBottom(retries = 20) {
         await tick();
 
         const attemptScroll = () => {
@@ -151,16 +172,22 @@
             }
         };
 
-        attemptScroll();
+        // Protéger l'utilisation de requestAnimationFrame
+        if (typeof window !== 'undefined' && typeof requestAnimationFrame === 'function') {
+            attemptScroll();
 
-        if (retries > 0) {
-            requestAnimationFrame(() => scrollToBottom(retries - 1));
+            if (retries > 0) {
+                requestAnimationFrame(() => scrollToBottom(retries - 1));
+            }
         }
     }
 
     onDestroy(() => {
         socket.emit('leave-channel', { userId: data.userId, channelId: data.channelId });
         socket.disconnect(); // Déconnexion propre du socket
+        if (scrollContainer) {
+            scrollContainer.removeEventListener('scroll', handleScroll);
+        }
     });
 
     // Ecoute des événements socket
@@ -221,12 +248,16 @@
 
     messagesStore.subscribe(async () => {
         await tick();
-        await scrollToBottom(); // Scroll to the bottom after the message is added
     });
+
+    let firstPageLoad = true;
 
     onMount(async () => {
         await tick();
-        await scrollToBottom();
+        if(firstPageLoad){
+            firstPageLoad = false;
+            await scrollToBottom();
+        }
     });
 
 </script>
@@ -254,6 +285,7 @@
         <div
           class="m-10 flex flex-col gap-5 overflow-auto flex-grow"
           bind:this={scrollContainer}
+          on:scroll={handleScroll}
         >
             {#if isLoading}
                 <div class="loading-indicator">Chargement...</div>

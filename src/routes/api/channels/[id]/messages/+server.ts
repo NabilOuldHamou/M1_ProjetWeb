@@ -14,12 +14,27 @@ export async function GET({ params, url }) {
 
 	try {
 		logger.debug(`Tentative de récupération des messages du cache pour le channel : ${channelId}`);
-		const redisMessageKeys = await redisClient.zRangeWithScores(
+		let redisMessageKeys = await redisClient.zRangeWithScores(
 			`channel:${channelId}:messages`,
 			offset,
 			offset + limit - 1,
 			{ REV: true }
 		);
+
+		const redisPipelineRemove = redisClient.multi();
+
+
+		for (const messageKey of redisMessageKeys) {
+			// Vérifie si la clé existe dans Redis
+			const messageKeyValue = messageKey.value;
+			const exists = await redisClient.exists(messageKeyValue);
+			if (!exists) {
+				// Supprime la référence expirée dans le zSet
+				redisPipelineRemove.zRem(`channel:${channelId}:messages`, messageKeyValue);
+				redisMessageKeys = redisMessageKeys.filter((key) => key.value !== messageKeyValue);
+			}
+		}
+		await redisPipelineRemove.exec();
 
 		if (redisMessageKeys.length > 0) {
 			const messages = await Promise.all(
@@ -114,7 +129,7 @@ export async function POST({ params, request }) {
 		});
 
 		// Ajouter le message dans Redis
-		await redisClient.set(`message:${newMessage.id}`, JSON.stringify(newMessage));
+		await redisClient.set(`message:${newMessage.id}`, JSON.stringify(newMessage), {EX: 1800});
 		await redisClient.zAdd(`channel:${channelId}:messages`, {
 			score: new Date(newMessage.createdAt).getTime(),
 			value: `message:${newMessage.id}`,
@@ -125,6 +140,7 @@ export async function POST({ params, request }) {
 		let channels = cachedChannels ? JSON.parse(cachedChannels) : [];
 		let channel = channels.find((c) => c.id === channelId);
 		if(channel){
+			console.log('channel found')
 			channel.lastMessage = {
 				id: newMessage.id,
 				text: newMessage.text,
@@ -141,8 +157,8 @@ export async function POST({ params, request }) {
 				user: newMessage.user,
 				createdAt: newMessage.createdAt,
 				}, lastUpdate: newMessage.createdAt, messages: undefined};
+			channels = [channel, ...channels];
 		}
-		channels = [channel, ...channels];
 		await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
 
 		newMessage.channel = {
