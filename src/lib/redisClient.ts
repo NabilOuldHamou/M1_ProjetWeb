@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 
 const client = await createClient({
-	url: process.env.REDIS_URL || 'redis://redis-server:6379'
+	url: process.env.REDIS_URL || 'redis://localhost:6379'
 });
 
 
