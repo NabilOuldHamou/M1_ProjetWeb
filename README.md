@@ -25,14 +25,11 @@ git clone https://github.com/NabilOuldHamou/M1_ProjetWeb
 ```
 
 <h3>Production</h3>
-Installez **Docker** sur votre machine puis utilisez la commande suivante pour lancer le projet
+Installez <bold>Docker</bold> sur votre machine puis utilisez la commande suivante pour lancer le projet
 
 ```bash
 docker compose up
 ```
-
-<h3>Développement</h3>
-TODO
 
 <h2 id="auth">🤝 Auteurs</h2>
 
