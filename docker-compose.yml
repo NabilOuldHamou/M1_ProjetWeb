@@ -1,5 +1,22 @@
 services:
 
+  app:
+    build: .
+    hostname: app
+    depends_on:
+      - mongodb
+      - redis
+    environment:
+      - DATABASE_URL=mongodb://temp-root-username:temp-password@mongodb/chat_projetweb?authSource=admin
+      - JWT_SECRET=ba63466f102443f4bb6f3670891358bc4488d0c717f6ebcd3ee3c5144e55fe2d
+    ports:
+      - "3000:3000"
+    networks:
+      - app_network
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
   mongodb:
     build: ./mongodb_rs
     hostname: mongodb
@@ -8,7 +25,7 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=temp-root-username
       - MONGO_INITDB_ROOT_PASSWORD=temp-password
       - MONGO_INITDB_DATABASE=chat_projetweb
-      - MONGO_REPLICA_HOST=localhost
+      - MONGO_REPLICA_HOST=mongodb
       - MONGO_REPLICA_PORT=27017
     ports:
       - "27017:27017"
