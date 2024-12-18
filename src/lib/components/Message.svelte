@@ -76,7 +76,7 @@
         >
           <!-- Image de profil -->
           <img
-            src={`http://localhost:5173/${user.profilePicture}`}
+            src={`https://arbres.oxyjen.io/${user.profilePicture}`}
             alt="Profile Picture"
             class="h-10 w-10 rounded-full border border-gray-300 cursor-pointer"
           />

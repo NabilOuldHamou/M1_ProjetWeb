@@ -10,7 +10,7 @@
 >
 	<div class="flex items-center gap-4">
 		<img
-			src={`http://localhost:5173/${user.profilePicture}`}
+			src={`https://arbres.oxyjen.io/${user.profilePicture}`}
 			alt="Profile"
 			class="h-12 w-12 rounded-full border border-gray-300"
 		/>

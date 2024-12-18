@@ -26,7 +26,7 @@
 	<div class="overlay" role="dialog" aria-labelledby="profile-card-title" on:click={onClose}>
 		<div class="profile-card flex flex-col gap-5" on:click|stopPropagation>
 			<div class="profile-header">
-				<img src="http://localhost:5173/{user.profilePicture}" alt="Profile" class="profile-image" />
+				<img src="https://arbres.oxyjen.io/{user.profilePicture}" alt="Profile" class="profile-image" />
 				<h2 id="profile-card-title" class="profile-name">{user.username}</h2>
 			</div>
 			<div class="profile-info">
