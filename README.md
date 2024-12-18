@@ -31,15 +31,6 @@ Installez **Docker** sur votre machine puis utilisez la commande suivante pour l
 docker compose up
 ```
 
-Ensuite, modifiez les données suivantes dans le fichier `.env`
-
-```yaml
-JWT_SECRET="..."
-MONGO_ROOT_USERNAME="..."
-MONGO_ROOT_PASSWORD="..."
-MONGO_DEFAULT_DB="..."
-```
-
 <h3>Développement</h3>
 TODO
 
