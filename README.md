@@ -24,24 +24,28 @@ Commencez par cloner le dépôt Git sur votre machine
 git clone https://github.com/NabilOuldHamou/M1_ProjetWeb
 ```
 
-<h3>Production</h3>
+<h3>Pour travailler</h3>
 Installez **Docker** sur votre machine puis utilisez la commande suivante pour lancer le projet
 
 ```bash
 docker compose up
 ```
 
-Ensuite, modifiez les données suivantes dans le fichier `.env`
-
-```yaml
-JWT_SECRET="..."
-MONGO_ROOT_USERNAME="..."
-MONGO_ROOT_PASSWORD="..."
-MONGO_DEFAULT_DB="..."
+```bash
+npm i -g pnpm
 ```
 
-<h3>Développement</h3>
-TODO
+Installez les packets
+```bash
+pnpm i
+```
+
+Génération des fonctions prisma et envoie du schéma sur la base
+```bash
+pnpx prisma generate && pnpx prisma db push
+```
+
+
 
 <h2 id="auth">🤝 Auteurs</h2>
 

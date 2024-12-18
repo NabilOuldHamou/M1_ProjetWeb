@@ -7,7 +7,7 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=temp-root-username
       - MONGO_INITDB_ROOT_PASSWORD=temp-password
       - MONGO_INITDB_DATABASE=chat_projetweb
-      - MONGO_REPLICA_HOST=mongodb
+      - MONGO_REPLICA_HOST=localhost
       - MONGO_REPLICA_PORT=27017
     ports:
       - "27017:27017"
