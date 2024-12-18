@@ -1,53 +1,77 @@
-## Presentation
+<h1 align="center" style="font-weight: bold;">Projet Web - M1 ISA 💻</h1>
 
-Creation of a project that use two or more NoSQL technologie: Redis & MangoDB
+<p align="center">
+    <a href="#tech">Technologies</a> - <a href="#started">Lancer le projet</a> - <a href="#auth">Auteurs</a>
+</p>
 
-Front: JavaScript
+<p align="center">Projet réalisé dans le cadre du cours de <strong>Web languages for data storage and management</strong>.</p>
 
-Back : Java (SpringBoot)
+<h2 id="technologies">💻 Technologies</h2>
 
-Api to Server Mongo (Nabil's Server)
+- SvelteKit
+- MongoDB
+- Redis
+- Docker
 
-Update Redis Database
+<h2 id="started">🚀 Lancer le projet</h2>
 
+Afin de lancer le projet en local, vous aurez besoin de suivre les instructions suivantes
 
-
-
-# sv
-
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
-
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+<h3>Clonez le dépôt</h3>
+Commencez par cloner le dépôt Git sur votre machine
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+git clone https://github.com/NabilOuldHamou/M1_ProjetWeb
 ```
 
-## Building
-
-To create a production version of your app:
+<h3>Production</h3>
+Installez **Docker** sur votre machine puis utilisez la commande suivante pour lancer le projet
 
 ```bash
-npm run build
+docker compose up
 ```
 
-You can preview the production build with `npm run preview`.
+<h3>Développement</h3>
+TODO
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+<h2 id="auth">🤝 Auteurs</h2>
+
+<table>
+<tr>
+<td align="center">
+<a href="https://github.com/NabilOuldHamou">
+<img src="https://github.com/NabilOuldHamou.png" width="100px;" alt="Nabil Profile Picture"/><br>
+<sub>
+<b>Nabil Ould Hamou</b>
+</sub>
+</a>
+</td>
+
+<td align="center">
+<a href="https://github.com/Luxray555">
+<img src="https://github.com/Luxray555.png" width="100px;" alt="Bilal Profile Picture"/><br>
+<sub>
+<b>Bilal Dieumegard</b>
+</sub>
+</a>
+</td>
+
+<td align="center">
+<a href="https://github.com/YacineHB">
+<img src="https://github.com/YacineHB.png" width="100px;" alt="Yacine Profile Picture"/><br>
+<sub>
+<b>Yacine Hbada</b>
+</sub>
+</a>
+</td>
+
+<td align="center">
+<a href="https://github.com/Yanax373">
+<img src="https://github.com/Yanax373.png" width="100px;" alt="Yanis Profile Picture"/><br>
+<sub>
+<b>Yanis Bouarfa</b>
+</sub>
+</a>
+</td>
+</tr>
+</table>

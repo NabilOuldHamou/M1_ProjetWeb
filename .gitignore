@@ -1,10 +1,14 @@
 node_modules
 
+
+/logs
 # Output
 .output
 .vercel
 /.svelte-kit
 /build
+
+.idea
 
 # OS
 .DS_Store
