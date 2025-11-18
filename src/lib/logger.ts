@@ -18,4 +18,14 @@ const logger = winston.createLogger({
 	]
 });
 
+// Ensure backward-compatible warn alias (syslog levels use 'warning')
+interface LoggerWithWarning {
+	warning?: (...args: unknown[]) => void;
+	warn?: (...args: unknown[]) => void;
+}
+const loggerWithWarning = logger as unknown as LoggerWithWarning;
+if (typeof loggerWithWarning.warn !== 'function' && typeof loggerWithWarning.warning === 'function') {
+	loggerWithWarning.warn = loggerWithWarning.warning.bind(logger);
+}
+
 export default logger;

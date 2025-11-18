@@ -2,9 +2,16 @@ import { json } from '@sveltejs/kit';
 import prisma from '$lib/prismaClient';
 import redisClient from '$lib/redisClient';
 import logger from '$lib/logger';
-import { sortChannels } from '$lib/utils/sort.ts';
+import { requireAuth } from '$lib/auth';
 
-export async function GET({ params, url }) {
+export async function GET(event) {
+	// Vérifier l'authentification
+	const authCheck = requireAuth(event);
+	if (authCheck instanceof Response) {
+		return authCheck;
+	}
+
+	const { params, url } = event;
 	const channelId = params.id;
 	logger.debug(`GET /api/channels/${channelId}/messages`);
 
@@ -40,19 +47,21 @@ export async function GET({ params, url }) {
 			const messages = await Promise.all(
 				redisMessageKeys.map(async (key) => {
 					const message = await redisClient.get(key.value);
-					return JSON.parse(message);
+					return message ? JSON.parse(message) : null;
 				})
 			);
 
 			const redisPipeline = redisClient.multi();
 			for (const key of redisMessageKeys) {
 				const message = await redisClient.get(key.value);
-				const msg = JSON.parse(message)
-				redisPipeline.set(key.value, JSON.stringify(msg), {EX: 1800});
-				redisPipeline.zAdd(`channel:${channelId}:messages`, {
-					score: key.score,
-					value: key.value,
-				});
+				const msg = message ? JSON.parse(message) : null;
+				if (msg) {
+					redisPipeline.set(key.value, JSON.stringify(msg), {EX: 1800});
+					redisPipeline.zAdd(`channel:${channelId}:messages`, {
+						score: key.score,
+						value: key.value,
+					});
+				}
 			}
 			await redisPipeline.exec();
 
@@ -87,24 +96,32 @@ export async function GET({ params, url }) {
 					value: messageKey,
 				});
 			}
-
 			await redisPipeline.exec();
 		}
 
 		return json({ limit, page, messages: messagesFromDB.reverse() });
-	} catch (err) {
-		logger.error(`Erreur lors de la récupération des messages : ${err.message}`);
+	} catch (err: unknown) {
+		logger.error(`Erreur lors de la récupération des messages : ${err instanceof Error ? err.message : String(err)}`);
 		return json({ error: 'Erreur lors de la récupération des messages' }, { status: 500 });
 	}
 }
 
-export async function POST({ params, request }) {
+export async function POST(event) {
+	// Vérifier l'authentification
+	const authCheck = requireAuth(event);
+	if (authCheck instanceof Response) {
+		return authCheck;
+	}
+
+	const { params, request } = event;
 	const channelId = params.id;
-	const { userId, text } = await request.json();
+	const body = await request.json();
+	const userId: string = body.userId;
+	const text: string = body.text;
 
 	try {
 		// Créer un nouveau message dans MongoDB
-		let newMessage = await prisma.message.create({
+		const newMessage = await prisma.message.create({
 			data: {
 				userId,
 				channelId,
@@ -137,9 +154,10 @@ export async function POST({ params, request }) {
 
 		//update the channels cache with the new message
 		const cachedChannels = await redisClient.get('channels');
-		let channels = cachedChannels ? JSON.parse(cachedChannels) : [];
-		let channel = channels.find((c) => c.id === channelId);
-		if(channel){
+		type Channel = { id?: string; name?: string; lastMessage?: unknown; lastUpdate?: unknown; messages?: unknown; [k:string]: unknown };
+		let channels: Channel[] = cachedChannels ? JSON.parse(cachedChannels) : [];
+		let channel: Channel | undefined = channels.find((c) => c.id === channelId);
+		if (channel) {
 			channel.lastMessage = {
 				id: newMessage.id,
 				text: newMessage.text,
@@ -149,49 +167,134 @@ export async function POST({ params, request }) {
 			channel.lastUpdate = newMessage.createdAt;
 			channel.messages = undefined;
 
-		}else{
-			channel = {...newMessage.channel, lastMessage: {
-				id: newMessage.id,
-				text: newMessage.text,
-				user: newMessage.user,
-				createdAt: newMessage.createdAt,
-				}, lastUpdate: newMessage.createdAt, messages: undefined};
-			channels = [channel, ...channels];
+		} else {
+			const ch: Record<string, unknown> = {
+				id: newMessage.channel.id,
+				name: newMessage.channel.name,
+				lastMessage: {
+					id: newMessage.id,
+					text: newMessage.text,
+					user: newMessage.user,
+					createdAt: newMessage.createdAt,
+				},
+				lastUpdate: newMessage.createdAt,
+				messages: undefined,
+			};
+			channels = [ch, ...channels];
+			// assign channel variable so later code reading channel.lastMessage works
+			channel = ch;
 		}
 		await redisClient.set('channels', JSON.stringify(channels), { EX: 600 });
 
-		newMessage.channel = {
-			id: newMessage.channel.id,
-			name: newMessage.channel.name,
-			lastMessage: channel.lastMessage,
-			lastUpdate: channel.lastUpdate,
-			messages: undefined
+		// Construire un objet réponse enrichi sans muter l'objet retourné par Prisma
+		const responseMessage = {
+			...newMessage,
+			channel: {
+				id: newMessage.channel.id,
+				name: newMessage.channel.name,
+				lastMessage: channel.lastMessage,
+				lastUpdate: channel.lastUpdate,
+				messages: undefined
+			}
 		};
 
 		logger.debug(`Nouveau message ajouté pour le channel : ${channelId}`);
-		return json(newMessage, { status: 201 });
-	} catch (err) {
-		logger.error(`Erreur lors de la création du message : ${err.message}`);
-		return json({ error: 'Erreur lors de la création du message' }, { status: 500 });
-	}
-}
+		try {
+			const { getIo } = await import('$lib/socketServer');
+			const io = getIo();
+			if (io) {
+				const roomName = `channel:${channelId}`;
 
-export async function DELETE({ params, request }) {
-	const channelId = params.id;
-	const { messageId } = await request.json();
+				try {
+					// Diagnostic logs
+					try {
+						const allSocketIds = Array.from(io.sockets.sockets.keys());
+						const allRooms = Array.from(io.sockets.adapter.rooms.keys());
+						logger.debug(`Socket.IO summary: totalSockets=${allSocketIds.length}, sockets=[${allSocketIds.join(',')}]`);
+						logger.debug(`Adapter rooms: [${allRooms.join(',')}]`);
+						try {
+							const { debugDumpChannels } = await import('$lib/socketServer');
+							const dump = debugDumpChannels();
+							logger.debug(`channelsUsers dump: ${JSON.stringify(dump)}`);
+						} catch (dumpErr) {
+							logger.debug('Unable to read channelsUsers dump: ' + (dumpErr instanceof Error ? dumpErr.message : String(dumpErr)));
+						}
+					} catch (diagErr) {
+						logger.debug('Error while collecting socket diagnostic info: ' + (diagErr instanceof Error ? diagErr.message : String(diagErr)));
+					}
 
-	try {
-		// Supprimer le message dans MongoDB
-		await prisma.message.delete({ where: { id: messageId } });
+					const adapterRooms = io.sockets.adapter.rooms as Map<string, Set<string>>;
+					const room = adapterRooms.get(roomName);
+					const socketIds = room ? Array.from(room) : [];
+					logger.debug(`Emitting new-message to room ${roomName} (sockets=${socketIds.length}): ${socketIds.join(',')}`);
 
-		// Supprimer le message dans Redis
-		await redisClient.del(`message:${messageId}`);
-		await redisClient.zRem(`channel:${channelId}:messages`, `message:${messageId}`);
+					if (socketIds.length > 0) {
+						io.to(roomName).emit('new-message', responseMessage);
+						logger.debug(`new-message émis par l'API pour channel:${channelId} messageId=${responseMessage.id}`);
+						try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'room' }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
+					} else {
+						try {
+							const { getUsersInChannel } = await import('$lib/socketServer');
+							const usersList = getUsersInChannel(channelId);
+							const socketIdsFromMap = usersList.map(u => u.socketId).filter(Boolean) as string[];
+							if (socketIdsFromMap.length > 0) {
+								logger.warn(`Room ${roomName} appears empty, emitting directement to known socketIds: ${socketIdsFromMap.join(',')}`);
+								for (const sid of socketIdsFromMap) {
+									try {
+										io.to(sid).emit('new-message', responseMessage);
+									} catch (ee) {
+										logger.warn(`Failed to emit new-message to socket ${sid}: ${ee instanceof Error ? ee.message : String(ee)}`);
+									}
+								}
+								logger.debug(`new-message emitted directly to socketIds pour channel:${channelId} messageId=${responseMessage.id}`);
+								try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'direct', socketIds: socketIdsFromMap }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
+							} else {
+								// As a last resort, attempt to discover sockets by scanning connected sockets' handshake.auth
+								const discovered: string[] = [];
+								try {
+									type HandshakeWithAuth = { auth?: { channelId?: string; userId?: string } };
+									for (const s of Array.from(io.sockets.sockets.values())) {
+										const h = ((s.handshake as unknown) as HandshakeWithAuth).auth;
+										if (h && h.channelId === channelId) discovered.push(s.id);
+									}
+									if (discovered.length > 0) {
+										logger.warn(`Found sockets by scanning handshake.auth: ${discovered.join(',')}`);
+										for (const sid of discovered) {
+											try { io.to(sid).emit('new-message', responseMessage); } catch (ee) { logger.warn('emit to discovered socket failed: ' + String(ee)); }
+										}
+										logger.debug(`new-message emitted to discovered sockets for channel:${channelId} messageId=${responseMessage.id}`);
+										try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'discovered', socketIds: discovered }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
+									} else {
+										logger.warn(`Room ${roomName} appears empty and no socketIds known — falling back to global broadcast for new-message ${newMessage.id}`);
+										io.emit('new-message', responseMessage);
+										logger.debug(`new-message broadcast global (fallback) pour channel:${channelId} messageId=${responseMessage.id}`);
+										try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'global' }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
+									}
+								} catch (scanErr) {
+									logger.warn('Error while scanning sockets for channelId: ' + String(scanErr));
+									io.emit('new-message', responseMessage);
+									try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'global' }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
+								}
+							}
+						} catch (e) {
+							logger.warn('Error while trying to emit directly to socketIds: ' + (e instanceof Error ? e.message : String(e)));
+							logger.warn(`Falling back to global emit for new-message ${newMessage.id}`);
+							io.emit('new-message', responseMessage);
+							try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'global-fallback-error' }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
+						}
+					}
+				} catch (e) {
+					logger.error('Error in socket emission logic: ' + (e instanceof Error ? e.message : String(e)));
+				}
+			}
+		} catch (e) {
+			logger.error('Error while initializing socket server: ' + (e instanceof Error ? e.message : String(e)));
+		}
 
-		logger.debug(`Message supprimé pour le channel : ${channelId}`);
-		return json({ message: 'Message supprimé avec succès' });
-	} catch (err) {
-		logger.error(`Erreur lors de la suppression du message : ${err.message}`);
-		return json({ error: 'Erreur lors de la suppression du message' }, { status: 500 });
+		// return the enriched message object (same shape as emitted via sockets)
+		return json(responseMessage, { status: 201 });
+	} catch (err: unknown) {
+		logger.error(`Erreur lors de l'envoi du message : ${err instanceof Error ? err.message : String(err)}`);
+		return json({ error: 'Erreur lors de l\'envoi du message' }, { status: 500 });
 	}
 }

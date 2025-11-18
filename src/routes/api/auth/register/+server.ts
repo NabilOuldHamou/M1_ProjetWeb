@@ -5,14 +5,10 @@ import jwt from 'jsonwebtoken';
 import logger from '$lib/logger';
 
 export async function POST({request}) {
-	const formData = await request.formData();
-
-	// @ts-ignore
-	const username: string = formData.get('username').toString().toLowerCase();
-	// @ts-ignore
-	const email: string = formData.get('email').toString().toLowerCase();
-	// @ts-ignore
-	const password: string = formData.get('password').toString();
+	const body = await request.json();
+	const username: string = body.username.toLowerCase();
+	const email: string = body.email.toLowerCase();
+	const password: string = body.password;
 
 	const user = await prismaClient.user.findFirst({
 		where: {
@@ -41,8 +37,7 @@ export async function POST({request}) {
 			}
 		});
 
-		// @ts-ignore
-		const token = jwt.sign(newUser, process.env.JWT_SECRET, { expiresIn: "1h" });
+		const token = jwt.sign(newUser, process.env.JWT_SECRET as string, { expiresIn: "1h" });
 		logger.debug(`Generated a JWT token for user ${newUser.email}.`)
 		return json({token: token, userId: newUser.id});
 

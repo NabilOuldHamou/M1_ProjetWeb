@@ -2,9 +2,17 @@ import { json } from '@sveltejs/kit';
 import prisma from '$lib/prismaClient';
 import redisClient from '$lib/redisClient';
 import logger from '$lib/logger';
+import { requireAuth } from '$lib/auth';
 
 // Récupérer les informations du canal et le dernier message (avec cache Redis)
-export async function GET({ params }) {
+export async function GET(event) {
+	// Vérifier l'authentification
+	const authCheck = requireAuth(event);
+	if (authCheck instanceof Response) {
+		return authCheck;
+	}
+
+	const { params } = event;
 	const channelId = params.id;
 
 	const channelCacheKey = `channel:${channelId}:info`;
@@ -70,7 +78,14 @@ export async function GET({ params }) {
 }
 
 // Supprimer un canal et invalider le cache associé
-export async function DELETE({ params }) {
+export async function DELETE(event) {
+	// Vérifier l'authentification
+	const authCheck = requireAuth(event);
+	if (authCheck instanceof Response) {
+		return authCheck;
+	}
+
+	const { params } = event;
 	const channelId = params.id;
 
 	try {
@@ -91,7 +106,14 @@ export async function DELETE({ params }) {
 }
 
 // Modifier un canal
-export async function PUT({ params, request }) {
+export async function PUT(event) {
+	// Vérifier l'authentification
+	const authCheck = requireAuth(event);
+	if (authCheck instanceof Response) {
+		return authCheck;
+	}
+
+	const { params, request } = event;
 	const channelId = params.id;
 	const { nom } = await request.json();
 

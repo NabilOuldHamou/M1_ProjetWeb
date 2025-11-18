@@ -1,18 +1,66 @@
 <script lang="ts">
-	export let user;
+	import { imageUrl } from '$lib/utils/imageUrl';
+
+	type User = {
+		id: string;
+		username?: string;
+		profilePicture?: string;
+		state?: string;
+		[s:string]: unknown;
+	};
+
+	export let user: User;
 
 	export let openProfileCard = () => {};
+
+	let imgSrc: string = '/profile-default.svg';
+
+	// vérifie si l'URL existe via HEAD
+	async function checkImageExists(url: string): Promise<boolean> {
+		try {
+			const resp = await fetch(url, { method: 'HEAD' });
+			return resp.ok;
+		} catch {
+			return false;
+		}
+	}
+
+	async function resolveImageSrc(path?: string | null) {
+		const candidate = imageUrl(path);
+		try {
+			const exists = await checkImageExists(candidate);
+			imgSrc = exists ? candidate : imageUrl(null);
+		} catch {
+			imgSrc = imageUrl(null);
+		}
+	}
+
+	$: if (user) {
+		// whenever user changes, resolve image
+		resolveImageSrc(user.profilePicture);
+	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			openProfileCard();
+		}
+	}
 </script>
 
 <div
 	class="flex items-center gap-4 justify-between p-3 cursor-pointer hover:bg-gray-100 rounded-lg border border-gray-300 shadow-sm"
 	on:click={openProfileCard}
+	role="button"
+	tabindex="0"
+	on:keydown={handleKeyDown}
 >
 	<div class="flex items-center gap-4">
 		<img
-			src={`https://arbres.oxyjen.io/${user.profilePicture}`}
+			src={imgSrc}
 			alt="Profile"
 			class="h-12 w-12 rounded-full border border-gray-300"
+			on:error={(e) => ((e.target as HTMLImageElement).src = imageUrl(null))}
 		/>
 		<div class="flex flex-col">
 			<span class="font-medium text-gray-800">{user.username}</span>

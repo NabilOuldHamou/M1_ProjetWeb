@@ -3,8 +3,15 @@ import { json } from '@sveltejs/kit';
 import redisClient from '$lib/redisClient';
 import prisma from '$lib/prismaClient';
 import logger from '$lib/logger';
+import { requireAuth } from '$lib/auth';
 
-export async function GET() {
+export async function GET(event) {
+	// Vérifier l'authentification
+	const authCheck = requireAuth(event);
+	if (authCheck instanceof Response) {
+		return authCheck;
+	}
+
 	try {
 		// Vérifier si les utilisateurs sont dans le cache Redis
 		const cachedUsers = await redisClient.get('users');
@@ -28,7 +35,10 @@ export async function GET() {
 	}
 }
 
-export async function POST({ request }) {
+export async function POST(event) {
+	// NOTE: POST /api/users est utilisé pour la création de compte (registration)
+	// On ne vérifie PAS l'authentification ici car c'est l'endpoint d'inscription
+	const { request } = event;
 	const { username, surname, name, email, password } = await request.json();
 
 	try {

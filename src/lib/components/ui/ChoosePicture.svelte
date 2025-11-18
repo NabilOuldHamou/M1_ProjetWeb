@@ -1,26 +1,43 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+    import { onMount } from 'svelte';
 
-	export let profilePicture: File | null = null;
-	export let defaultImage = '/profile-default.svg'; // Image par défaut si aucune image n'est sélectionnée
+    // Accept either a File (new upload), a string (existing filename) or null
+    export let profilePicture: File | string | null = null;
+    export let defaultImage = '/profile-default.svg'; // Image par défaut si aucune image n'est sélectionnée
 
-	let clientPicture: string | null = profilePicture ? `/${profilePicture}` : defaultImage;
+    let clientPicture: string = defaultImage;
 
-	// Fonction exécutée lorsque l'utilisateur sélectionne une image
-	const handleFileChange = (event: Event) => {
-		const input = event.target as HTMLInputElement;
-		if (input.files?.length) {
-			profilePicture = input.files[0]; // Affectation du fichier sélectionné
-			clientPicture = URL.createObjectURL(profilePicture); // Prévisualisation de l'image
-		} else {
-			clientPicture = null;
-			profilePicture = null;
-		}
-	};
+    // Initialize preview based on incoming prop
+    $: {
+        if (profilePicture instanceof File) {
+            try {
+                clientPicture = URL.createObjectURL(profilePicture);
+            } catch (_) {
+                clientPicture = defaultImage;
+            }
+        } else if (typeof profilePicture === 'string' && profilePicture) {
+            clientPicture = `/${profilePicture}`;
+        } else {
+            clientPicture = defaultImage;
+        }
+    }
 
-	const handleDelete = () => {
-		profilePicture = null;
-	};
+    // Fonction exécutée lorsque l'utilisateur sélectionne une image
+    const handleFileChange = (event: Event) => {
+        const input = event.target as HTMLInputElement;
+        if (input.files?.length) {
+            profilePicture = input.files[0]; // Affectation du fichier sélectionné
+            clientPicture = URL.createObjectURL(profilePicture as File); // Prévisualisation de l'image
+        } else {
+            clientPicture = defaultImage;
+            profilePicture = null;
+        }
+    };
+
+    const handleDelete = () => {
+        clientPicture = defaultImage;
+        profilePicture = null;
+    };
 </script>
 
 <!-- Conteneur principal -->

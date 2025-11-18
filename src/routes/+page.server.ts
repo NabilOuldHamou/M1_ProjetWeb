@@ -1,10 +1,10 @@
 import { type Actions } from '@sveltejs/kit';
-import { redirect, error, fail } from '@sveltejs/kit';
+import { redirect, fail } from '@sveltejs/kit';
 import logger from '$lib/logger';
 
 export async function load({locals}) {
 	if (locals.token != undefined) {
-		redirect(302, "/chats")
+		throw redirect(302, "/chats")
 	}
 }
 
@@ -12,9 +12,18 @@ export const actions: Actions = {
 	login: async ({request, fetch, cookies}) => {
 		const formData = await request.formData();
 
+		// Convertir FormData en JSON
+		const body = {
+			email: formData.get('email')?.toString() || '',
+			password: formData.get('password')?.toString() || ''
+		};
+
 		const response = await fetch('/api/auth/login', {
 			method: "POST",
-			body: formData
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(body)
 		});
 
 		const data = await response.json();
@@ -45,9 +54,19 @@ export const actions: Actions = {
 	register: async ({request, fetch, cookies}) => {
 		const formData = await request.formData();
 
+		// Convertir FormData en JSON
+		const body = {
+			username: formData.get('username')?.toString() || '',
+			email: formData.get('email')?.toString() || '',
+			password: formData.get('password')?.toString() || ''
+		};
+
 		const response = await fetch('/api/auth/register', {
 			method: "POST",
-			body: formData
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(body)
 		});
 
 		const data = await response.json();

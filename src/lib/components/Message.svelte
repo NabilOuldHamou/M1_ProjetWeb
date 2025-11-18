@@ -1,122 +1,136 @@
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card";
   import { formatDistanceToNow } from '$lib/utils/date.js';
   import { onMount } from "svelte";
   import ProfileInfo from "$lib/components/ui/ProfileInfo.svelte"; // Importer le composant ProfileInfo
+  import { imageUrl } from '$lib/utils/imageUrl';
+  import type { Message as MsgType } from '$lib/stores/messagesStore';
+
+  export type User = { id: string; username?: string; profilePicture?: string; [k:string]: unknown };
 
   export let userId: string; // Si c'est le message de l'utilisateur courant
 
-  export let message = null; // Contenu du message
+  export let message: MsgType | null = null; // Contenu du message
 
-  export let setActiveProfile;
-  export let activeProfileId = null;
+  export let setActiveProfile: (id: string | null) => void;
+  export let activeProfileId: string | null = null;
 
-  let user = null;
+  let user: User | null = null;
 
-  let myMessage;
+  let myMessage: boolean = false;
+
+  let imgSrc: string = '/profile-default.svg';
 
   async function fetchUser() {
-    const res = await fetch(`/api/users/${message.user.id}`, {
+    const res = await fetch(`/api/users/${message?.user.id}`,
+    {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
       }
     });
 
-    const data = await res.json();
-    user = data;
+    user = await res.json();
+
+    // une fois l'utilisateur chargé, résoudre l'URL de l'image sans provoquer 404
+    await resolveImageSrc(user.profilePicture);
+  }
+
+  async function checkImageExists(url: string): Promise<boolean> {
+    try {
+      // Utiliser HEAD pour ne pas télécharger la ressource
+      const resp = await fetch(url, { method: 'HEAD' });
+      return resp.ok;
+    } catch {
+      // échec possible à cause du CORS ou du DNS ; retourner false pour tomber sur le fallback
+      return false;
+    }
+  }
+
+  async function resolveImageSrc(path?: string | null) {
+    const candidate = imageUrl(path);
+
+    // debug
+    console.debug('[Message] resolveImageSrc candidate:', candidate);
+
+    // Si en DEV et candidate est un chemin relatif, faire HEAD pour vérifier
+    try {
+      const exists = await checkImageExists(candidate);
+      console.debug('[Message] checkImageExists ->', exists, candidate);
+      imgSrc = exists ? candidate : imageUrl(null);
+    } catch {
+      imgSrc = imageUrl(null);
+    }
   }
 
   function toggleProfileInfo() {
     if (activeProfileId === message.id) {
-      // Si le profil cliqué est déjà actif, le fermer
       setActiveProfile(null);
     } else {
-      // Sinon, afficher ce profil et masquer les autres
       setActiveProfile(message.id);
     }
   }
 
+  // Fallback handler pour les images manquantes
+  function handleImgError(e: Event) {
+    const target = e.target as HTMLImageElement | null;
+    if (target) target.src = imageUrl(null);
+  }
+
   let timeElapsed: string;
 
-  // Fonction pour mettre à jour le temps écoulé
   const updateElapsed = () => {
     timeElapsed = formatDistanceToNow(message.createdAt);
   };
 
-  // Initialisation de l'intervalle
   onMount(() => {
     fetchUser();
-    updateElapsed(); // Calcul initial
-    const interval = setInterval(updateElapsed, 1000); // Mise à jour toutes les secondes
-    myMessage = message.user.id === userId; // Vérifier si c'est le message de l'utilisateur courant
-    return () => {
-      clearInterval(interval); // Nettoyage lors du démontage
-    };
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 1000);
+    myMessage = message.user.id === userId;
+    return () => clearInterval(interval);
   });
 
 </script>
 
 {#if user !== null}
 
-  <Card.Root class="relative">
-    <Card.Header
-      class="flex items-center justify-between {myMessage ? 'flex-row' : 'flex-row-reverse'}"
-    >
-      <!-- Conteneur pour la date -->
-      <span class="text-xs sm:text-sm md:text-base text-gray-500 items-top">
-      {timeElapsed}
-    </span>
+  <div class="relative">
+    <div class="flex items-center justify-between {myMessage ? 'flex-row' : 'flex-row-reverse'}">
+      <span class="text-xs sm:text-sm md:text-base text-gray-500 items-top">{timeElapsed}</span>
 
-      <!-- Conteneur pour l'image et le nom d'utilisateur -->
       <div class="flex items-center gap-3 {myMessage ? 'flex-row-reverse' : 'flex-row'}">
-        <div
-          class="relative"
-          on:click={toggleProfileInfo}
-        >
-          <!-- Image de profil -->
+        <div class="relative" on:click={toggleProfileInfo} role="button" tabindex="0" on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleProfileInfo(); } }}>
           <img
-            src={`https://arbres.oxyjen.io/${user.profilePicture}`}
-            alt="Profile Picture"
+            src={imgSrc}
+            alt={`${user?.username ?? 'Profil'} image`}
             class="h-10 w-10 rounded-full border border-gray-300 cursor-pointer"
+            on:error={handleImgError}
           />
 
-          <!-- Infos du profil (affichées au survol) -->
           <ProfileInfo user={user} show={activeProfileId === message.id} position={myMessage} />
         </div>
 
         <div class="flex flex-col text-right {myMessage ? 'text-right' : 'text-left'}">
-          <Card.Title
-            class="text-gray-800 text-sm sm:text-base md:text-lg truncate {myMessage ? 'font-bold' : ''}"
-          >
+          <div class="text-gray-800 text-sm sm:text-base md:text-lg truncate {myMessage ? 'font-bold' : ''}">
             {myMessage ? "(Moi)" : ""} {user.username}
-          </Card.Title>
+          </div>
         </div>
       </div>
-    </Card.Header>
+    </div>
 
-    <!-- Contenu du message -->
-    <Card.Content class="text-sm sm:text-base md:text-lg text-gray-700">
+    <div class="text-sm sm:text-base md:text-lg text-gray-700">
       <p>{message.text}</p>
-    </Card.Content>
-  </Card.Root>
-
+    </div>
+  </div>
 
 {/if}
+
 <style>
   img {
     object-fit: cover; /* Assure un bon rendu des images */
   }
 
-  .flex-row-reverse {
-    flex-direction: row-reverse;
-  }
-
   .text-right {
     text-align: right;
-  }
-
-  .text-left {
-    text-align: left;
   }
 </style>

@@ -3,9 +3,17 @@ import prisma from '$lib/prismaClient';
 import redisClient from '$lib/redisClient';
 import logger from '$lib/logger';
 import { sortChannels } from '$lib/utils/sort.ts';
+import { requireAuth } from '$lib/auth';
 
 // GET: Liste tous les canaux avec leur premier message
-export async function GET({ url }) {
+export async function GET(event) {
+	// Vérifier l'authentification
+	const authCheck = requireAuth(event);
+	if (authCheck instanceof Response) {
+		return authCheck;
+	}
+
+	const { url } = event;
 	if(url.searchParams.get("name") != null && url.searchParams.get("name") != ""){
 		const name = url.searchParams.get("name");
 		try {
@@ -98,7 +106,14 @@ export async function GET({ url }) {
 
 }
 
-export async function POST({ request }) {
+export async function POST(event) {
+	// Vérifier l'authentification
+	const authCheck = requireAuth(event);
+	if (authCheck instanceof Response) {
+		return authCheck;
+	}
+
+	const { request } = event;
 	const { name } = await request.json();
 
 	try {
@@ -135,5 +150,3 @@ export async function POST({ request }) {
 		return json({ error: 'Erreur lors de la création du canal' }, { status: 500 });
 	}
 }
-
-

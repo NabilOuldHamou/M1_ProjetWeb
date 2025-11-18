@@ -1,10 +1,34 @@
-<script>
+<script lang="ts">
 	import Button from '$lib/components/ui/button/button.svelte';
+	import { imageUrl } from '$lib/utils/imageUrl';
 
 	export let user;
 	export let userSessionId;
 	export let show = false; // Contrôle si la carte est visible
 	export let onClose = () => {}; // Fonction pour fermer la carte
+
+	let imgSrc = '/profile-default.svg';
+
+	async function checkImageExists(url: string): Promise<boolean> {
+		try {
+			const resp = await fetch(url, { method: 'HEAD' });
+			return resp.ok;
+		} catch {
+			return false;
+		}
+	}
+
+	async function resolveImageSrc(path?: string | null) {
+		const candidate = imageUrl(path);
+		try {
+			const exists = await checkImageExists(candidate);
+			imgSrc = exists ? candidate : imageUrl(null);
+		} catch {
+			imgSrc = imageUrl(null);
+		}
+	}
+
+	$: if (user) resolveImageSrc(user.profilePicture);
 
 	const disconnect = async () => {
 		try {
@@ -23,10 +47,10 @@
 </script>
 
 {#if show}
-	<div class="overlay" role="dialog" aria-labelledby="profile-card-title" on:click={onClose}>
-		<div class="profile-card flex flex-col gap-5" on:click|stopPropagation>
+	<div class="overlay" role="button" aria-label="Fermer la fenêtre" tabindex="0" on:click={onClose} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') onClose?.(); }}>
+		<div class="profile-card flex flex-col gap-5" on:click|stopPropagation role="dialog" aria-modal="true" tabindex="0" on:keydown|stopPropagation={(e) => { if (e.key === 'Escape') onClose?.(); }}>
 			<div class="profile-header">
-				<img src="https://arbres.oxyjen.io/{user.profilePicture}" alt="Profile" class="profile-image" />
+				<img src={imgSrc} alt={`${user?.username ?? 'Profil'} image`} class="profile-image" on:error={(e) => ((e.target as HTMLImageElement).src = imageUrl(null))} />
 				<h2 id="profile-card-title" class="profile-name">{user.username}</h2>
 			</div>
 			<div class="profile-info">
