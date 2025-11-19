@@ -223,68 +223,32 @@ export async function POST(event) {
 						logger.debug('Error while collecting socket diagnostic info: ' + (diagErr instanceof Error ? diagErr.message : String(diagErr)));
 					}
 
-					const adapterRooms = io.sockets.adapter.rooms as Map<string, Set<string>>;
-					const room = adapterRooms.get(roomName);
-					const socketIds = room ? Array.from(room) : [];
-					logger.debug(`Emitting new-message to room ${roomName} (sockets=${socketIds.length}): ${socketIds.join(',')}`);
+				const adapterRooms = io.sockets.adapter.rooms as Map<string, Set<string>>;
+				const room = adapterRooms.get(roomName);
+				const socketIds = room ? Array.from(room) : [];
+				logger.debug(`Emitting new-message to room ${roomName} (sockets=${socketIds.length}): ${socketIds.join(',')}`);
 
-					if (socketIds.length > 0) {
-						io.to(roomName).emit('new-message', responseMessage);
-						logger.debug(`new-message émis par l'API pour channel:${channelId} messageId=${responseMessage.id}`);
-						try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'room' }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
-					} else {
-						try {
-							const { getUsersInChannel } = await import('$lib/socketServer');
-							const usersList = getUsersInChannel(channelId);
-							const socketIdsFromMap = usersList.map(u => u.socketId).filter(Boolean) as string[];
-							if (socketIdsFromMap.length > 0) {
-								logger.warn(`Room ${roomName} appears empty, emitting directement to known socketIds: ${socketIdsFromMap.join(',')}`);
-								for (const sid of socketIdsFromMap) {
-									try {
-										io.to(sid).emit('new-message', responseMessage);
-									} catch (ee) {
-										logger.warn(`Failed to emit new-message to socket ${sid}: ${ee instanceof Error ? ee.message : String(ee)}`);
-									}
-								}
-								logger.debug(`new-message emitted directly to socketIds pour channel:${channelId} messageId=${responseMessage.id}`);
-								try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'direct', socketIds: socketIdsFromMap }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
-							} else {
-								// As a last resort, attempt to discover sockets by scanning connected sockets' handshake.auth
-								const discovered: string[] = [];
-								try {
-									type HandshakeWithAuth = { auth?: { channelId?: string; userId?: string } };
-									for (const s of Array.from(io.sockets.sockets.values())) {
-										const h = ((s.handshake as unknown) as HandshakeWithAuth).auth;
-										if (h && h.channelId === channelId) discovered.push(s.id);
-									}
-									if (discovered.length > 0) {
-										logger.warn(`Found sockets by scanning handshake.auth: ${discovered.join(',')}`);
-										for (const sid of discovered) {
-											try { io.to(sid).emit('new-message', responseMessage); } catch (ee) { logger.warn('emit to discovered socket failed: ' + String(ee)); }
-										}
-										logger.debug(`new-message emitted to discovered sockets for channel:${channelId} messageId=${responseMessage.id}`);
-										try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'discovered', socketIds: discovered }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
-									} else {
-										logger.warn(`Room ${roomName} appears empty and no socketIds known — falling back to global broadcast for new-message ${newMessage.id}`);
-										io.emit('new-message', responseMessage);
-										logger.debug(`new-message broadcast global (fallback) pour channel:${channelId} messageId=${responseMessage.id}`);
-										try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'global' }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
-									}
-								} catch (scanErr) {
-									logger.warn('Error while scanning sockets for channelId: ' + String(scanErr));
-									io.emit('new-message', responseMessage);
-									try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'global' }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
-								}
-							}
-						} catch (e) {
-							logger.warn('Error while trying to emit directly to socketIds: ' + (e instanceof Error ? e.message : String(e)));
-							logger.warn(`Falling back to global emit for new-message ${newMessage.id}`);
-							io.emit('new-message', responseMessage);
-							try { io.emit('debug-new-message', { channelId, messageId: responseMessage.id, mode: 'global-fallback-error' }); } catch (err) { logger.debug('debug-new-message emit failed: ' + String(err)); }
-						}
-					}
-				} catch (e) {
-					logger.error('Error in socket emission logic: ' + (e instanceof Error ? e.message : String(e)));
+				// Émettre vers la room pour les participants du chat (si quelqu'un est dans la room)
+				if (socketIds.length > 0) {
+					io.to(roomName).emit('new-message', responseMessage);
+					logger.debug(`new-message émis vers la room pour channel:${channelId} messageId=${responseMessage.id}`);
+				}
+
+				// TOUJOURS émettre globalement aussi pour que la liste des chats se mette à jour sur /chats
+				io.emit('new-message', responseMessage);
+				logger.debug(`new-message émis globalement pour channel:${channelId} messageId=${responseMessage.id}`);
+				try {
+					io.emit('debug-new-message', {
+						channelId,
+						messageId: responseMessage.id,
+						mode: socketIds.length > 0 ? 'room+global' : 'global-only',
+						socketsInRoom: socketIds.length
+					});
+				} catch (err) {
+					logger.debug('debug-new-message emit failed: ' + String(err));
+				}
+			} catch (e) {
+				logger.error('Error in socket emission logic: ' + (e instanceof Error ? e.message : String(e)));
 				}
 			}
 		} catch (e) {

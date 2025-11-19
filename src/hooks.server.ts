@@ -69,27 +69,29 @@ export const handle: Handle = async ({ event, resolve }) => {
 				}
 			})();
 
-			// Auto-join support: si le client a fourni handshake.auth { channelId, userId }, on effectue le join automatiquement
-			try {
-				const auth = (socket.handshake && (socket.handshake as any).auth) || {};
-				if (auth && auth.channelId && auth.userId) {
-					try {
-						// Ensure any existing entry for this user gets its socketId updated
-						try { setUserSocketId(auth.userId, socket.id); } catch (e) { /* ignore */ }
-						addUserToChannel(auth.channelId, { id: auth.userId, socketId: socket.id, state: 'En ligne' });
-						const roomNameAuth = `channel:${auth.channelId}`;
-						socket.join(roomNameAuth);
-						const usersListAuth = getUsersInChannel(auth.channelId);
-						socket.emit('load-users-channel', usersListAuth);
-						socket.broadcast.to(roomNameAuth).emit('load-users-channel', usersListAuth);
-						console.log(`[Socket] Auto-join effectué pour socket ${socket.id} sur ${roomNameAuth} (userId=${auth.userId})`);
-					} catch (ajErr) {
-						console.warn('Auto-join failed:', ajErr);
-					}
+		// Auto-join support: si le client a fourni handshake.auth { channelId, userId }, on effectue le join automatiquement
+		try {
+			const auth = (socket.handshake && (socket.handshake as any).auth) || {};
+			console.log(`[Socket] Handshake auth pour ${socket.id}:`, auth);
+			if (auth && auth.channelId && auth.userId) {
+				try {
+					// Ensure any existing entry for this user gets its socketId updated
+					try { setUserSocketId(auth.userId, socket.id); } catch (e) { console.warn('setUserSocketId failed in auto-join:', e); }
+					addUserToChannel(auth.channelId, { id: auth.userId, socketId: socket.id, state: 'En ligne' });
+					const roomNameAuth = `channel:${auth.channelId}`;
+					socket.join(roomNameAuth);
+					const usersListAuth = getUsersInChannel(auth.channelId);
+					const socketRooms = Array.from(socket.rooms);
+					console.log(`[Socket] Auto-join effectué pour socket ${socket.id} sur ${roomNameAuth} (userId=${auth.userId}), rooms actuelles:`, socketRooms);
+					socket.emit('load-users-channel', usersListAuth);
+					socket.broadcast.to(roomNameAuth).emit('load-users-channel', usersListAuth);
+				} catch (ajErr) {
+					console.warn('Auto-join failed:', ajErr);
 				}
-			} catch (e) {
-				console.warn('Error reading handshake auth for auto-join', e);
 			}
+		} catch (e) {
+			console.warn('Error reading handshake auth for auto-join', e);
+		}
 
 			// Nouveau canal
 			socket.on('new-channel', (channel, ack?: (res:{ok:boolean}) => void) => {
@@ -104,33 +106,39 @@ export const handle: Handle = async ({ event, resolve }) => {
 			// Message emission is performed by the HTTP API which creates the message and
 			// then uses the shared io instance to emit to the room.
 
-			// Améliorer les logs pour les joins afin d'aider au debug des utilisateurs connectés
-			socket.on('new-user-join', ({ user, channelId }, ack?: (res: { ok: boolean; room?: string; users?: string[] | User[] }) => void) => {
-				try { setUserSocketId((user as User).id, socket.id); } catch (e) { /* ignore */ }
-				addUserToChannel(channelId, { ...(user as User), socketId: socket.id, state: 'En ligne' });
-				// dump after join
-				(async () => {
-					try {
-						const { debugDumpChannels } = await import('$lib/socketServer');
-						const dump = debugDumpChannels();
-						logger.debug(`channelsUsers dump after new-user-join: ${JSON.stringify(dump)}`);
-					} catch (dE) {
-						console.debug('Unable to dump channelsUsers after join:', dE);
-					}
-				})();
+		// Améliorer les logs pour les joins afin d'aider au debug des utilisateurs connectés
+		socket.on('new-user-join', ({ user, channelId }, ack?: (res: { ok: boolean; room?: string; users?: string[] | User[] }) => void) => {
+			console.log(`[Socket] new-user-join reçu de ${socket.id} pour channelId=${channelId} userId=${(user as User)?.id}`);
+			try { setUserSocketId((user as User).id, socket.id); } catch (e) { console.warn('setUserSocketId failed:', e); }
+			addUserToChannel(channelId, { ...(user as User), socketId: socket.id, state: 'En ligne' });
+			// dump after join
+			(async () => {
+				try {
+					const { debugDumpChannels } = await import('$lib/socketServer');
+					const dump = debugDumpChannels();
+					logger.debug(`channelsUsers dump after new-user-join: ${JSON.stringify(dump)}`);
+					console.log(`[Socket] channelsUsers dump after join:`, dump);
+				} catch (dE) {
+					console.debug('Unable to dump channelsUsers after join:', dE);
+				}
+			})();
 
-				const roomName = `channel:${channelId}`;
-				socket.join(roomName);
-				const usersList = getUsersInChannel(channelId);
-				console.log(`[Socket] ${socket.id} a rejoint ${roomName} — users:`, usersList.map(u=>u.id));
+			const roomName = `channel:${channelId}`;
+			socket.join(roomName);
+			const usersList = getUsersInChannel(channelId);
+			console.log(`[Socket] ${socket.id} a rejoint ${roomName} — users:`, usersList.map(u=>u.id));
 
-				// Envoyer la liste immédiatement au nouvel arrivant
-				socket.emit('load-users-channel', usersList);
-				// Diffuser la liste aux autres participants (exclut l'appelant)
-				socket.broadcast.to(roomName).emit('load-users-channel', usersList);
-				// ack pour confirmer join
-				if (ack) ack({ ok: true, room: roomName, users: usersList });
-			});
+			// Vérifier que le socket est bien dans la room
+			const socketRooms = Array.from(socket.rooms);
+			console.log(`[Socket] ${socket.id} est maintenant dans les rooms:`, socketRooms);
+
+			// Envoyer la liste immédiatement au nouvel arrivant
+			socket.emit('load-users-channel', usersList);
+			// Diffuser la liste aux autres participants (exclut l'appelant)
+			socket.broadcast.to(roomName).emit('load-users-channel', usersList);
+			// ack pour confirmer join
+			if (ack) ack({ ok: true, room: roomName, users: usersList });
+		});
 
 			// Handler pour que le client puisse demander la liste actuelle des users dans une room
 			socket.on('request-users', ({ channelId }, ack?: (res: { ok: boolean; users?: User[] }) => void) => {

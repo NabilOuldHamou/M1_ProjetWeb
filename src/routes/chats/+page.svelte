@@ -24,13 +24,30 @@
 	let showCreateChat = false;  // État pour afficher ou masquer CreateChat
 
 	let socket: Socket | null = null; // initialisé côté client
+	let wildcardListener: ((eventName: string, ...args: any[]) => void) | null = null;
 
 	onMount(() => {
 		socket = initSocket();
-		if (!socket) return;
+		if (!socket) {
+			console.error('[/chats] Socket non initialisé !');
+			return;
+		}
+
+		console.log('[/chats] Socket initialisé, id=', socket.id, 'connected=', socket.connected);
+
+		// Retirer les anciens listeners pour éviter les doublons
+		socket.off("new-channel");
+		socket.off("new-message");
+		socket.off("debug-new-message");
+
+		// Listener wildcard pour capturer TOUS les événements
+		wildcardListener = (eventName: string, ...args: any[]) => {
+			console.log('[/chats] Événement socket reçu:', eventName, args);
+		};
+		socket.onAny(wildcardListener);
 
 		socket.on("new-channel", (channel: Channel) => {
-			console.log('new-channel reçu (client):', channel, ' socketId=', socket?.id);
+			console.log('[/chats] new-channel reçu (client):', channel, ' socketId=', socket?.id);
 			if (!channels.find((c: Channel) => c.id === channel.id)) {
 				channels = [channel, ...channels];
 			} else {
@@ -39,20 +56,56 @@
 		});
 
 		socket.on("new-message", (message: Message) => {
+			console.log('[/chats] new-message reçu (client):', message, ' socketId=', socket?.id);
 			const channel = message.channel as Channel | undefined;
-			if (!channel) return;
-			if (channels.find((c: Channel) => c.id === channel.id)) {
-				channels = channels.map((c: Channel) => {
-					if (c.id === channel.id) {
-						return { ...c, lastMessage: message, lastUpdate: message.createdAt };
-					}
-					return c;
-				});
-				channels = [channel, ...channels.filter((c: Channel) => c.id !== channel.id)];
+			if (!channel) {
+				console.warn('[/chats] new-message reçu mais channel est undefined');
+				return;
+			}
+
+			// Créer un objet channel mis à jour avec le dernier message
+			const updatedChannel: Channel = {
+				id: channel.id,
+				name: channel.name,
+				lastMessage: {
+					text: message.text,
+					createdAt: message.createdAt
+				},
+				lastUpdate: message.createdAt
+			};
+
+			// Vérifier si le channel existe déjà dans la liste
+			const existingIndex = channels.findIndex((c: Channel) => c.id === channel.id);
+
+			if (existingIndex !== -1) {
+				// Mettre à jour le channel existant et le déplacer en haut
+				channels = [
+					updatedChannel,
+					...channels.filter((c: Channel) => c.id !== channel.id)
+				];
+				console.log('[/chats] Channel mis à jour:', updatedChannel.id);
 			} else {
-				channels = [channel, ...channels];
+				// Ajouter le nouveau channel en haut
+				channels = [updatedChannel, ...channels];
+				console.log('[/chats] Nouveau channel ajouté:', updatedChannel.id);
 			}
 		});
+
+		// Listener de debug pour tracer les émissions de l'API
+		socket.on('debug-new-message', (info: any) => {
+			console.log('[/chats] debug-new-message reçu:', info);
+		});
+
+		// Log pour confirmer l'enregistrement des listeners
+		console.log('[/chats] Listeners enregistrés pour new-channel, new-message et debug-new-message');
+
+		// Si le socket n'est pas encore connecté, attendre la connexion
+		if (!socket.connected) {
+			console.log('[/chats] Socket pas encore connecté, attente de connexion...');
+			socket.once('connect', () => {
+				console.log('[/chats] Socket maintenant connecté, id=', socket?.id);
+			});
+		}
 	});
 
 	function openProfileCard() {
@@ -127,6 +180,17 @@
 
 	onDestroy(() => {
 	    if (unsubscribeUser) unsubscribeUser();
+
+	    // Nettoyer les listeners socket pour éviter les fuites de mémoire et les conflits
+	    if (socket) {
+	        console.log('[/chats] onDestroy - nettoyage des listeners');
+	        socket.off("new-channel");
+	        socket.off("new-message");
+	        socket.off("debug-new-message");
+	        if (wildcardListener) {
+	            socket.offAny(wildcardListener); // Retirer uniquement notre wildcard listener
+	        }
+	    }
 	});
 
 	function handleImageError(ev: Event) {

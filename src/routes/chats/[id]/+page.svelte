@@ -199,14 +199,23 @@
             } catch (e) {
                 console.warn('Failed to parse response JSON for new message:', e);
             }
-             await tick();
-             await scrollToBottom();
-             console.log('Message envoyé avec succès');
-             messageText = '';
-         } else {
-             console.log('Erreur lors de l\'envoi du message');
-         }
-     }
+
+            // Ajout optimiste du message au store si on l'a reçu
+            if (newMessage) {
+                const exists = $messagesStore.some((m: MsgType) => m.id === newMessage.id);
+                if (!exists) {
+                    $messagesStore = [...$messagesStore, newMessage];
+                }
+            }
+
+            await tick();
+            await scrollToBottom();
+            console.log('Message envoyé avec succès');
+            messageText = '';
+        } else {
+            console.log('Erreur lors de l\'envoi du message');
+        }
+    }
 
     let isLoading = false;
     const limit = 10;
@@ -278,15 +287,33 @@
         }
     }
 
+    // Variables pour stocker les références aux handlers
+    let newMessageHandler: ((message: MsgType) => Promise<void>) | null = null;
+    let loadUsersChannelHandler: ((us: User[]) => Promise<void>) | null = null;
+    let userWritingHandler: ((userId: string) => Promise<void>) | null = null;
+    let userStopWritingHandler: ((userId: string) => Promise<void>) | null = null;
+    let debugNewMessageHandler: ((info: { channelId: string; messageId: string }) => void) | null = null;
+
     onDestroy(() => {
         if (socket) {
             socket.emit('leave-channel', { userId: data.userId, channelId: data.channelId });
+
+            // Retirer les listeners spécifiques à cette page
+            if (newMessageHandler) socket.off("new-message", newMessageHandler);
+            if (loadUsersChannelHandler) socket.off("load-users-channel", loadUsersChannelHandler);
+            if (userWritingHandler) socket.off('user-writing', userWritingHandler);
+            if (userStopWritingHandler) socket.off('user-stop-writing', userStopWritingHandler);
+            if (debugNewMessageHandler) socket.off('debug-new-message', debugNewMessageHandler);
+
+            console.log('[/chats/[id]] onDestroy - listeners retirés');
+
             // Ne PAS déconnecter le socket global ici : il est partagé par l'application.
             // socket.disconnect(); // removal of global disconnection avoids losing connection across pages
         }
         if (scrollContainer) {
             scrollContainer.removeEventListener('scroll', handleScroll);
         }
+        if (unsubscribeUser) unsubscribeUser();
     });
 
     onMount(() => {
@@ -308,14 +335,17 @@
         }
 
         // Ecoute des événements socket
-        // Retirer d'éventuels anciens listeners pour éviter duplicates
-        socket.off('new-message');
-        socket.off('load-users-channel');
-        socket.off('user-writing');
-        socket.off('user-stop-writing');
+        // NOTE: On ne retire PAS les listeners existants car ils peuvent appartenir à d'autres pages
+        // On filtre les événements dans le listener lui-même
 
-        socket.on("new-message", async (message: MsgType) => {
-            console.log('new-message reçu (client):', message, ' socketId=', socket?.id);
+        // Créer des références aux fonctions listeners pour pouvoir les retirer dans onDestroy
+        newMessageHandler = async (message: MsgType) => {
+            console.log('[/chats/[id]] new-message reçu (client):', message, ' socketId=', socket?.id, ' channelId actuel=', data.channelId);
+            // Filtrer : ne traiter que les messages du channel actuel
+            if (message.channel?.id !== data.channelId) {
+                console.log('[/chats/[id]] Message ignoré, channel différent:', message.channel?.id);
+                return;
+            }
             // Eviter doublon si le message est déjà présent (optimistic update)
             const exists = $messagesStore.some((m: MsgType) => m.id === message.id);
             if (!exists) {
@@ -323,37 +353,19 @@
                 await tick();
                 await scrollToBottom(); // Scroll to the bottom after the message is added
             } else {
-                console.log('Message déjà présent localement, skip add ; id=', message.id);
+                console.log('[/chats/[id]] Message déjà présent localement, skip add ; id=', message.id);
             }
-         });
+        };
 
-
-        // Listener de debug envoyé par l'API pour vérifier la connectivité
-        socket.on('debug-new-message', (info: { channelId: string; messageId: string }) => {
-            console.log('debug-new-message reçu (client):', info, ' socketId=', socket?.id);
-        });
-
-        socket.on("load-users-channel", async (us: User[]) => {
-            console.log('load-users-channel reçu (client), users:', us);
+        loadUsersChannelHandler = async (us: User[]) => {
+            console.log('[/chats/[id]] load-users-channel reçu (client), users:', us);
             // Forcer la réactivité en clonant les objets
             users = Array.isArray(us) ? us.map(u => ({ ...u })) : [];
             await tick();
-        });
+        };
 
-        // Si le socket est déjà connecté (cas reconnect), émettre join immédiatement
-        if (socket.connected) {
-            // handled by immediate emit above; kept for backward-compat
-            joinChannelWithRetry();
-        }
-
-        socket.on("connect", () => {
-            // Quand le socket se connecte, tenter de rejoindre la room
-            // appeler la version globale définie plus haut
-            joinChannelWithRetry();
-        });
-
-        socket.on('user-writing', async (userId: string) => {
-            console.log('user-writing reçu pour userId:', userId);
+        userWritingHandler = async (userId: string) => {
+            console.log('[/chats/[id]] user-writing reçu pour userId:', userId);
 
             // On met à jour l'état de l'utilisateur
             users = users.map((u: User) => {
@@ -367,14 +379,14 @@
             // On recrée une nouvelle référence du tableau `users`
             users = [...users]; // Cela force Svelte à détecter le changement dans la liste
 
-            console.log('Utilisateurs après mise à jour de l\'état:', users);
+            console.log('[/chats/[id]] Utilisateurs après mise à jour de l\'état:', users);
 
             // Forcer une mise à jour avec tick
             await tick();
-        });
+        };
 
-        socket.on('user-stop-writing', async (userId: string) => {
-            console.log('user-stop-writing reçu pour userId:', userId);
+        userStopWritingHandler = async (userId: string) => {
+            console.log('[/chats/[id]] user-stop-writing reçu pour userId:', userId);
 
             users = users.map((u: User) => {
                 if (u.id === userId) {
@@ -386,10 +398,33 @@
 
             users = [...users]; // Cela force Svelte à détecter le changement dans la liste
 
-            console.log('Utilisateurs après mise à jour de l\'état:', users);
+            console.log('[/chats/[id]] Utilisateurs après mise à jour de l\'état:', users);
 
             await tick();
+        };
+
+        debugNewMessageHandler = (info: { channelId: string; messageId: string }) => {
+            console.log('[/chats/[id]] debug-new-message reçu (client):', info, ' socketId=', socket?.id);
+        };
+
+        socket.on("new-message", newMessageHandler);
+        socket.on("load-users-channel", loadUsersChannelHandler);
+        socket.on('user-writing', userWritingHandler);
+        socket.on('user-stop-writing', userStopWritingHandler);
+        socket.on('debug-new-message', debugNewMessageHandler);
+
+        // Si le socket est déjà connecté (cas reconnect), émettre join immédiatement
+        if (socket.connected) {
+            // handled by immediate emit above; kept for backward-compat
+            joinChannelWithRetry();
+        }
+
+        socket.on("connect", () => {
+            // Quand le socket se connecte, tenter de rejoindre la room
+            // appeler la version globale définie plus haut
+            joinChannelWithRetry();
         });
+
 
     });
 
